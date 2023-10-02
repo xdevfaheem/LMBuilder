@@ -1,10 +1,11 @@
 import torch
 from torch import nn
 from logsoftmax import LogSoftMax
-from lightning_utilities.core.imports import RequirementCache
+from llm_builder.utils import is_pkg_req_met
+
 
 # class for Multi Head Attention Module
-class MultiHeadAttention(nn.Module):
+class CasualMultiHeadAttention(nn.Module):
 
     def __init__(self, max_seq_len, embedding_dim=512, n_heads=8, dropout=0.1, bias=True):
 
@@ -33,7 +34,7 @@ class MultiHeadAttention(nn.Module):
         _cuda_ver = float(f"{major}.{minor}")
         
         self.flash_attn = ( # Requirements for flash attention
-            RequirementCache("flash-attn>=2.0.0.post1") and
+            is_pkg_req_met("flash-attn>=2.0.0.post1") and
             (_cuda_ver > 8.0) and 
             (float(torch.version.cuda) >= 11.6) and 
             (float(".".join(torch.__version__.split('.')[:2])) > 1.12) and 
