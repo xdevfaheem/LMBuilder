@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class GPTConfig:
+class LLMConfig:
     
     """
     vocab_size : Vocab Size of the model
