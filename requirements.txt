@@ -1,0 +1,6 @@
+torch
+sentencepiece
+tiktoken
+youtokentome
+distributed
+flash-attn
