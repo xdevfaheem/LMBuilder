@@ -4,3 +4,4 @@ tiktoken
 youtokentome
 distributed
 flash-attn
+torchinfo
