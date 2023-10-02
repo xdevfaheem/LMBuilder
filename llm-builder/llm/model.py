@@ -1,4 +1,3 @@
-
 from torchinfo import summary
 from prettytable import PrettyTable
 import torch
