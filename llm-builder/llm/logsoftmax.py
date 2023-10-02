@@ -7,7 +7,7 @@ class LogSoftmax(nn.Module):
 
     def __init__(self, axis, keepdim=True):
 
-        super(CustomSoftmax, self).__init__()
+        super(LogSoftmax, self).__init__()
 
         self.axis = axis # axis along the softmax is applied
         self.keepdims = keepdim # whether to keep the structure of the dimension but shape will be 1 on guven axis or it'll be squeezed along the gven axis
