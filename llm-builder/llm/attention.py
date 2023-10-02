@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from logsoftmax import LogSoftMax
-from llm_builder.utils import is_pkg_req_met
+from llm_builder.utils import is_pkg_req_met, is_package_available
 
 
 # class for Multi Head Attention Module
@@ -33,13 +33,13 @@ class CasualMultiHeadAttention(nn.Module):
         major, minor = (torch.cuda.get_device_capability(torch.cuda.current_device()))
         _cuda_ver = float(f"{major}.{minor}")
         
-        self.flash_attn = ( # Requirements for flash attention
+        self.flash_attn = ( # Requirements for flash attention 2 cuda kernel
             is_pkg_req_met("flash-attn>=2.0.0.post1") and
             (_cuda_ver > 8.0) and 
             (float(torch.version.cuda) >= 11.6) and 
             (float(".".join(torch.__version__.split('.')[:2])) > 1.12) and 
-            (find_spec("packaging") is not None) and 
-            (find_spec("ninja") is not None)
+            is_package_available("packaging") and 
+            is_package_available("ninja")
         )
         if not self.flash_attn:
             print("WARNING: using slow attention. Flash Attention is not Supported!")
