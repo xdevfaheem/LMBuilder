@@ -6,7 +6,7 @@ from layernorm import LayerNormWithBias
 
 
 # class for Single Decoder Layer in Transformers
-class Regressive_Block(nn.Module):
+class RegressiveBlock(nn.Module):
 
     def __init__(self,
                  max_len,
