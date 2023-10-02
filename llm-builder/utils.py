@@ -29,7 +29,7 @@ def number_to_words(number):
         raise ValueError("Number out of range")
 
 @lru_cache()
-def package_available(package_name: str) -> bool:
+def is_package_available(package_name: str) -> bool:
     
     """Check if a package is available in your environment.
     >>> package_available('os')
