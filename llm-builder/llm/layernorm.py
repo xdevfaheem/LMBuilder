@@ -7,7 +7,7 @@ class LayerNormWithBias(nn.Module):
     """ LayerNorm but with an optional bias. PyTorch doesn't support passing `bias` argument """
 
     def __init__(self, ndim, bias):
-        super().__init__()
+        super(LayerNormWithBias).__init__()
         self.weight = nn.Parameter(torch.ones(ndim))
         self.bias = nn.Parameter(torch.zeros(ndim)) if bias else None
 
@@ -24,7 +24,7 @@ class RMSNorm(torch.nn.Module):
     """
 
     def __init__(self, size: int, dim: int = -1, eps: float = 1e-5) -> None:
-        super().__init__()
+        super(RMSNorm).__init__()
         self.weight = torch.nn.Parameter(torch.ones(size))
         self.eps = eps
         self.dim = dim
