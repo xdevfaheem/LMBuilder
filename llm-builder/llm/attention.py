@@ -17,7 +17,7 @@ class CasualMultiHeadAttention(nn.Module):
             n_heads : Number of Attention Heads to run in parallel
         """
 
-        super(MultiHeadAttention, self).__init__()
+        super(CasualMultiHeadAttention, self).__init__()
 
         self.embedding_dim = embedding_dim # Embedding Dimension of the model
         self.dropout = dropout
