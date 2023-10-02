@@ -23,8 +23,3 @@ def number_to_words(number):
         return number_to_words(number // 1000000000000) + " trillion" + (" " + number_to_words(number % 1000000000000) if number % 1000000000000 != 0 else "")
     else:
         raise ValueError("Number out of range")
-
-if "__name__" == "__main__":
-    number = 20802560
-    words = number_to_words(number)
-    print(f"{number} in words is: {words}")
