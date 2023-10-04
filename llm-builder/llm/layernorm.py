@@ -37,11 +37,11 @@ class RMSNorm(nn.Module):
         super(RMSNorm).__init__()
         self.eps = eps
         if weight:
-            self.weight = torch.nn.Parameter(
+            self.gamma = torch.nn.Parameter(
                 torch.ones(normalized_shape, dtype=dtype, device=device)
             )
         else:
-            self.register_parameter('weight', None)
+            self.register_parameter('gamma', None)
 
     def rms_norm(self, x: torch.Tensor, weight=None, eps=1e-5) -> torch.Tensor:
         # NOTE: the original RMSNorm paper implementation is not equivalent
@@ -52,4 +52,4 @@ class RMSNorm(nn.Module):
         return x_normed
     
     def forward(self, x):
-        return self.rms_norm(x.float(), self.weight, self.eps).to(dtype=x.dtype)
+        return self.rms_norm(x.float(), self.gamma, self.eps).to(dtype=x.dtype)
