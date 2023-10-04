@@ -21,7 +21,7 @@ class RMSNorm(nn.Module):
     Root Mean Square Layer Normalization. 
     To reduce (avoid) Internal Covariance Shift (ICS)
 
-    RMSNorm Claims re-centering (0-mean) is the success of LayerNorm rather than re-scaling (variance-1).
+    RMSNorm Claims re-centering (mean=0) is the success of LayerNorm rather than re-scaling (variance=1).
     Basically they claims, success of layernorm is not because of re-centering and re-scaling,
     but mostly because of re-scaling (to have a variance of 1)
     """
