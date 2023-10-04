@@ -4,6 +4,40 @@ from logsoftmax import LogSoftMax
 from llm_builder.utils import is_pkg_req_met, is_package_available
 
 
+class Attention(nn.Module):
+    def __init__(self, word_size:int=512, embed_dim:int=64) -> None:
+        super().__init__()
+        self.embed_dim = embed_dim
+        self.dim_K = torch.tensor(embed_dim)
+        self.query = nn.Linear(in_features=word_size, out_features=embed_dim, bias=True)
+        self.key  = nn.Linear(in_features=word_size, out_features=embed_dim, bias=True)
+        self.value = nn.Linear(in_features=word_size, out_features=embed_dim, bias=True)
+
+    def self_attention(self, Q: Tensor, K: Tensor, V: Tensor,
+                       mask:Optional[BoolTensor]=None) -> Tensor:
+        """
+
+        Args:
+            Q (torch.Tensor): The query tensor.
+            K (torch.Tensor): The key tensor.
+            V (torch.Tensor): The value tensor.
+            mask (Optional[torch.BoolTensor]): A mask tensor used to hide specific positions in the input sequence.
+                It should have the same shape as Q, K, and must be a Boolean tensor with 0s indicating positions to be masked.
+                Use `None` for no masking. Default is `None`.
+        Returns:
+            The output tensor of the self-attention layer.
+        """
+
+        K_T = torch.transpose(K, 0, 1)
+        score = torch.matmul(Q, K_T)                # Matmul
+        score /= torch.sqrt(self.dim_K)             # Scale
+        if mask is not None:                        # Mask (opt.)
+            score = torch.masked_fill(score, mask==0, -torch.inf)
+        score = torch.softmax(score, dim=-1)        # SoftMax
+        Z = torch.matmul(score, V)                  # Matmul
+        return Z
+
+
 # class for Multi Head Attention Module
 class CasualMultiHeadAttention(nn.Module):
 
@@ -145,3 +179,57 @@ class CasualMultiHeadAttention(nn.Module):
 
         else:
             return self.proj_dropout(output)
+
+
+class  MultiQueryAttention(nn.Module):
+    r"""
+    https://arxiv.org/pdf/1911.02150.pdf
+    """
+    def __init__(self, max_seq_len: int = 512, embed_dim: int = 512, n_query:int=8, bias=False) -> None:
+        super(MultiQueryAttention).__init__(word_size, embed_dim)
+        
+        self.n_query = n_query
+        self.dim_K = torch.tensor(embed_dim)
+        self.proj = nn.Linear(in_features=embed_dim * n_query,
+                              out_features=embed_dim, bias=False)
+        self.querys = nn.ModuleList([
+            nn.Linear(in_features=word_size, out_features=embed_dim, bias=bias)
+            for _ in range(n_query)
+        ])
+        self.key = nn.Linear(in_features=word_size, out_features=embed_dim, bias=True)
+        self.value = nn.Linear(in_features=word_size, out_features=embed_dim, bias=True)
+        #mask
+        self.register_buffer("bias", torch.tril(torch.ones(max_seq_len, max_seq_len, dtype=torch.bool)).unsqueeze(0).unsqueeze(0))
+
+    def self_attention(self, Q: Tensor, K: Tensor, V: Tensor,
+                       mask:Optional[BoolTensor]=None) -> Tensor:
+        """
+
+        Args:
+            Q (torch.Tensor): The query tensor.
+            K (torch.Tensor): The key tensor.
+            V (torch.Tensor): The value tensor.
+            mask (Optional[torch.BoolTensor]): A mask tensor used to hide specific positions in the input sequence.
+                It should have the same shape as Q, K, and must be a Boolean tensor with 0s indicating positions to be masked.
+                Use `None` for no masking. Default is `None`.
+        Returns:
+            The output tensor of the self-attention layer.
+        """
+
+        K_T = torch.transpose(K, 0, 1)
+        score = torch.matmul(Q, K_T)                # Matmul
+        score /= torch.sqrt(self.dim_K)             # Scale
+        if mask is not None:                        # Mask (opt.)
+            score = torch.masked_fill(score, mask==0, -torch.inf)
+        score = torch.softmax(score, dim=-1)        # SoftMax
+        Z = torch.matmul(score, V)                  # Matmul
+        return Z
+
+    def forward(self, x: Tensor, mask:Optional[BoolTensor]=None) -> Tensor:
+        K = self.key(x)
+        V = self.value(x)
+        Z_s = torch.cat([
+            self.self_attention(query(x), K, V, mask) for query in self.querys
+        ], dim=1)
+        Z = self.proj(Z_s)
+        return Z
