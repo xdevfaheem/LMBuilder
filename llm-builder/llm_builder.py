@@ -169,23 +169,40 @@ class GPTBuilder:
             best_val_loss = float("inf")
             current_epoch=0
 
-            # various inits, derived attributes, I/O setup
-            self.ddp = int(os.environ.get('RANK', -1)) != -1 # is this a ddp run?
-            if self.ddp:
-                init_process_group(backend=backend)
-                rank = int(os.environ['RANK'])
-                local_rank = int(os.environ['LOCAL_RANK'])
-                world_size = int(os.environ['WORLD_SIZE'])
-                device = f'cuda:{local_rank}'
-                torch.cuda.set_device(device)
-                master_process = rank == 0 # this process will do logging, checkpointing etc.
-                seed_offset = rank # each process gets a different seed
-                # world_size number of processes will be training simultaneously, so we can scale
-                # down the desired gradient accumulation iterations per process proportionally
-            else:# if not ddp, we are running on a single gpu, and one process
+            if self.device_type == "gpu":
+
+                # various inits, derived attributes, I/O setup
+                if self.ddp := int(os.environ.get('RANK', -1)) != -1:
+                    init_process_group(backend=backend)
+                    rank = int(os.environ['RANK'])
+                    local_rank = int(os.environ['LOCAL_RANK'])
+                    world_size = int(os.environ['WORLD_SIZE'])
+                    device = f'cuda:{local_rank}'
+                    torch.cuda.set_device(device)
+                    master_process = rank == 0 # this process will do logging, checkpointing etc.
+                    seed_offset = rank # each process gets a different seed
+                    # world_size number of processes will be training simultaneously, so we can scale
+                    # down the desired gradient accumulation iterations per process proportionally
+                else:# if not ddp, we are running on a single gpu, and one process
+                    master_process = True
+                    seed_offset = 0
+                    world_size = 1
+
+            elif self.device_type == "tpu":
+
+                master_process = xm.is_master_ordinal()
+                pass #TODO
+
+            elif self.device_type == "cpu":
+
                 master_process = True
                 seed_offset = 0
                 world_size = 1
+
+            else:
+
+                raise NotImplementedError("No other device types supported currently!")
+
             
             assert ((self.batch_size_per_device * world_size) // world_size) == self.batch_size_per_device, "batch size per gpu should be divisible by world size"
             self.batch_size = self.batch_size_per_device
