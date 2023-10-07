@@ -357,16 +357,28 @@ class GPTBuilder:
                 self.model = DDP(self.model, gradient_as_bucket_view=True)
             
             self.model = self.model.module if self.ddp else self.model # plug the model from ddp for multi-gpu keep the model as it is for tpu-ddp or single device
-            
+
+            # initializing gradient scaler
             self.logger.info("Setting up gradient scaler...")
+            
             if self.device_type == 'tpu' or self.device_type == 'cpu':
                 scaler = None
             elif self.device_type == 'cuda':
                 # using GradScaler if data type is float16 otherwise there will be no-ops
                 scaler = torch.cuda.amp.GradScaler(enabled=(dtype == 'float16'), use_zero_grad=True)
-                
+
+            # loading scaler state dict
             if self.init_from == 'resume' and (self.device_type != 'tpu' and self.device_type != 'cpu'):
                 scaler.load_state_dict(self.checkpoint['grad_scaler'])
+
+            # initializing the optimizer
+            self.logger.info("Setting up the optimizer..")
+            self.optimizer = Trainer.configure_optimizers(self.weight_decay, self.learning_rate, (self.beta1, self.beta2), self.device_type)
+
+            # loading optimizer state dict
+            if self.init_from == 'resume':
+                self.optimizer.load_state_dict(self.checkpoint['optimizer'])
+            checkpoint = None # free up memory
 
             @dataclass
             class TrainerConfig:
@@ -387,7 +399,6 @@ class GPTBuilder:
                 ddp=ddp
                 tpu_ddp = self.tpu_ddp
                 decay_lr=self.decay_lr
-                learning_rate=self.learning_rate
                 eval_interval=self.eval_interval
                 always_save_checkpoint=self.always_save_checkpoint
                 model_args=self.model_args
@@ -403,13 +414,6 @@ class GPTBuilder:
             self.logger.info("Setting up the trainer...")
             self.trainer = Trainer(TrainerConfig, train_dataloader, val_dataloader)
             
-            # initiating the optimizer
-            self.logger.info("Setting up the optimizer..")
-            self.optimizer = self.trainer.configure_optimizers(self.weight_decay, self.learning_rate, (self.beta1, self.beta2), self.device_type)
-
-            if self.init_from == 'resume':
-                self.optimizer.load_state_dict(self.checkpoint['optimizer'])
-            checkpoint = None # free up memory
             
     def _configure_logging(self, log_dir, file_name):
         # Create a logger
