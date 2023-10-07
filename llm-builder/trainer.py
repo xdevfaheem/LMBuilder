@@ -229,7 +229,10 @@ class Trainer:
                         scaler.step(optimizer)
                         scaler.update()
                     else:
-                        optimizer.step()
+                        if self.config.device_type == "tpu" and self.config.tpu_ddp:
+                          optimizer.step()
+                        elif self.config.device_type == "tpu" and self.config.tpu_ddp:
+                          xm.optimizer_step(optimizer)
                     # flush the gradients as soon as we can, no need for this memory anymore
                     optimizer.zero_grad(set_to_none=True)
 
