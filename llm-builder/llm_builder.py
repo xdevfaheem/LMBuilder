@@ -30,7 +30,7 @@ except ImportError:
 from model import GPTConfig, GPT
 
 
-class GPTBuilderConfig:
+class LLMBuilderConfig:
     
     def __init__(self, dataset_config: dict, **kwargs):
         
@@ -107,7 +107,7 @@ class GPTBuilderConfig:
 gptconfig = GPTBuilderConfig({"train": [("tinystories", 1.0)], "test": [("tinystories", 1.0)]})
 
 
-class GPTBuilder:
+class LLMBuilder:
     
     
     def __init__(self, builder_config=gptconfig):
@@ -379,42 +379,41 @@ class GPTBuilder:
         if self.init_from == 'resume':
             self.optimizer.load_state_dict(self.checkpoint['optimizer'])
         checkpoint = None # free up memory
-
-        trainer_kwargs = dict(
-            wandb_log=self.wandb_log
-            wandb_project=self.wandb_project
-            wandb_run_name=self.wandb_run_name
-            out_dir=model_dir
-            log_dir=log_dir
-            logger=train_logger
-            global_step=global_step
-            global_iter=global_iter
-            initial_iter=initial_iter
-            best_val_loss=best_val_loss
-            curr_epoch=current_epoch
-            total_epochs=self.num_epochs
-            scaler=scaler
-            device=device
-            ddp=ddp
-            tpu_ddp = self.tpu_ddp
-            decay_lr=self.decay_lr
-            eval_interval=self.eval_interval
-            always_save_checkpoint=self.always_save_checkpoint
-            model_args=self.model_args
-            eval_only=self.eval_only
-            gradient_accumulation_steps=self.gradient_accumulation_steps
-            grad_clip=self.grad_clip_value
-            ctx=ctx_mnr
-            log_interval=self.log_interval
-            max_iters=self.max_iters
-            mastr_proc=master_process
-        )
-        trainer_cfg = TrainerConfig(**trainer_kwargs)
         
         # initialiting the Trainer class instance
         self.logger.info("Setting up the trainer...")
-        self.trainer = Trainer(trainer_cfg, train_dataloader, val_dataloader)
-            
+        self.trainer = Trainer(
+                trainer_cfg,
+                train_dataloader,
+                val_dataloader,
+                wandb_log=self.wandb_log,
+                wandb_project=self.wandb_project,
+                wandb_run_name=self.wandb_run_name,
+                out_dir=model_dir,
+                log_dir=log_dir,
+                logger=train_logger
+                global_step=global_step,
+                global_iter=global_iter,
+                initial_iter=initial_iter
+                best_val_loss=best_val_loss,
+                curr_epoch=current_epoch,
+                total_epochs=self.num_epochs,
+                scaler=scaler,
+                device=device,
+                ddp=ddp,
+                tpu_ddp = self.tpu_ddp,
+                decay_lr=self.decay_lr,
+                eval_interval=self.eval_interval,
+                always_save_checkpoint=self.always_save_checkpoint,
+                model_args=self.model_args,
+                eval_only=self.eval_only,
+                gradient_accumulation_steps=self.gradient_accumulation_steps,
+                grad_clip=self.grad_clip_value,
+                ctx=ctx_mnr,
+                log_interval=self.log_interval,
+                max_iters=self.max_iters,
+                mastr_proc=master_process,
+            )
             
     def _configure_logging(self, log_dir, file_name):
         # Create a logger
