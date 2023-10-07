@@ -40,18 +40,74 @@ class TrainerConfig:
                                                                 
 class Trainer:
     
-    def __init__(self, trainer_config, train_loader, val_loader):
-        self.config = trainer_config
+    def __init__(self,
+                 train_loader,
+                 val_loader,
+                 wandb_log=False,
+                 wandb_project="",
+                 wandb_run_name="",
+                 out_dir="./",
+                 log_dir="./log",
+                 logger=None,
+                 global_step=0,
+                 global_iter=0,
+                 initial_iter=0,
+                 best_val_loss=float(1000000.0),
+                 curr_epoch=0,
+                 total_epochs=3,
+                 scaler=None,
+                 device=None,
+                 ddp=False,
+                 tpu_ddp = False,
+                 decay_lr=False,
+                 eval_interval=2000,
+                 always_save_checkpoint=True,
+                 model_args: dict = {},
+                 eval_only=False,
+                 gradient_accumulation_steps=5,
+                 grad_clip=1.0,
+                 ctx=nullcontext(),
+                 log_interval=5,
+                 max_iters=600000,
+                 mastr_proc=False,
+        ):
+            
         self.tbatch_genarator = train_loader
         self.vbatch_generator = val_loader
+        self.wandb_log = wandb_log
+        self.wandb_project = wandb_project
+        self.wandb_run_name = wandb_run_name
+        self.out_dir = out_dir
+        self.log_dir = log_dir
+        self.logger = logger
+        self.global_step = global_step
+        self.global_iter = global_iter
+        self.initial_iter = initial_iter
+        self.best_val_loss = best_val_loss
+        self.curr_epoch = curr_epoch
+        self.total_epochs = total_epochs
+        self.scaler = scaler
+        self.device = device
+        self.ddp = ddp
+        self.tpu_ddp = tpu_ddp
+        self.decay_lr = decay_lr
+        self.eval_interval = eval_interval
+        self.always_save_checkpoint = always_save_checkpoint
+        self.model_args = model_args
+        self.eval_only = eval_only
+        self.gradient_accumulation_steps = gradient_accumulation_steps
+        self.grad_clip = grad_clip
+        self.ctx = ctx
+        self.log_interval = log_interval
+        self.max_iters = max_iters=600000
+        self.mastr_proc = mastr_proc=False
         self.epochs = epochs
         self.plot_dir =  os.path.join(self.config.log_dir, "plots")
         os.makedirs(self.plot_dir, exist_ok=True)
             
         # logging
-        if self.config.wandb_log and self.config.mastr_proc:
-            wandb.init(project=self.config.wandb_project, name=self.config.wandb_run_name, config=self.config.logging_config)
-        self.logger = self.config.logger
+        if self.wandb_log and self.mastr_proc:
+            wandb.init(project=self.wandb_project, name=self.wandb_run_name, config=self.logging_config)
     
     # helps estimate an arbitrarily accurate loss over either split using many batches
     @torch.no_grad()
@@ -63,13 +119,13 @@ class Trainer:
         
         for split in ['train', 'val']:
             
-            losses = torch.zeros(self.config.eval_iters)
+            losses = torch.zeros(self.eval_iters)
             generator = iter(self.tbatch_genarator if split=="train" else self.vbatch_generator)
             
             for k, (X, Y) in enumerate(generator):
-                if k > self.config.eval_iters:
+                if k > self.eval_iters:
                     break
-                with self.config.ctx:
+                with self.ctx:
                     _, loss = model(X, Y)
                 losses[k] = loss.item()
             out[split] = losses
@@ -177,11 +233,11 @@ class Trainer:
     def train(self, model, optimizer):
         
         # changing the scope of some frequently used variable into local
-        scaler = self.config.scaler # grad scaler
-        initial_iter=self.config.initial_iter
-        global_iter=self.config.global_iter # total number of iteration
-        max_iters=self.config.max_iters # maximum number of iterations
-        global_step=self.config.global_step # total model grad adjustment made so far
+        scaler = self.scaler # grad scaler
+        initial_iter=self.initial_iter
+        global_iter=self.global_iter # total number of iteration
+        max_iters=self.max_iters # maximum number of iterations
+        global_step=self.global_step # total model grad adjustment made so far
         local_iter=0 # curent iteration number
         
         t0 = time.perf_counter()
@@ -202,20 +258,20 @@ class Trainer:
             for X, Y in train_loader:
             
                 # termination conditions
-                if self.config.max_iters is not None and global_step >= self.config.max_iters:
+                if self.max_iters is not None and global_step >= self.max_iters:
                     self.logger.info("Training Completed!")
                     break
 
                 # determine and set the learning rate for this iteration
-                lr = self.get_lr(global_step) if self.config.decay_lr else self.config.learning_rate
+                lr = self.get_lr(global_step) if self.decay_lr else self.learning_rate
                 for param_group in optimizer.param_groups:
                     param_group['lr'] = lr
 
                 # evaluate the loss on train/val sets and write checkpoints
-                if global_iter % self.config.eval_interval == 0 and self.config.mastr_proc:
+                if global_iter % self.eval_interval == 0 and self.mastr_proc:
                     losses_dict = self.validate_model(model, global_iter, epoch)
                     self.logger.info(f"Epoch: {epoch} Total Iters: {global_iter} Total Steps: {global_step} Train loss: {losses_dict['train']:.4f} Val loss: {losses_dict['val']:.4f}")
-                    if self.config.wandb_log:
+                    if self.wandb_log:
                         wandb.log({
                             "iters": global_iter,
                             "step": global_step,
@@ -223,37 +279,37 @@ class Trainer:
                             "val_loss": losses_dict['val'],
                             "lr": lr,
                         })
-                    if losses_dict['val'] < self.config.best_val_loss or self.config.always_save_checkpoint:
+                    if losses_dict['val'] < self.best_val_loss or self.always_save_checkpoint:
                         best_val_loss = losses_dict['val']
                         if global_iter > 0:
-                            self.save_checkpoint(self.config.out_dir, model, optimizer, scaler, global_iter, global_step, best_val_loss, epoch)
-                    if self.config.eval_only and global_step == 0:
+                            self.save_checkpoint(self.out_dir, model, optimizer, scaler, global_iter, global_step, best_val_loss, epoch)
+                    if self.eval_only and global_step == 0:
                         logger.info(f"Training Stopped at {global_step}")
                         break
 
                 # forward backward update, with gradient accumulation to simulate larger batch size
                 # check if the gradients are accumulating or accumulated
                 iter_t0 = time.perf_counter()
-                is_accumulating = ((global_step+1) % self.config.gradient_accumulation_steps != 0 # +1 to prevent scale and backprop at gstep 0
+                is_accumulating = ((global_step+1) % self.gradient_accumulation_steps != 0 # +1 to prevent scale and backprop at gstep 0
                 
                 if is_accumulating:
                     
                     # This bloats the code with repeated code. should be fixed by looking into this (https://pytorch.org/docs/master/_modules/torch/nn/parallel/distributed.html#DistributedDataParallel.no_sync) in the future insha allah
-                    if self.config.ddp:
+                    if self.ddp:
                         #https://github.com/pytorch/pytorch/issues/43201#issue-680863643
                         with torch.nn.parallel.DistributedDataParallel.no_sync()
-                            with self.config.ctx:
+                            with self.ctx:
                                 logits, loss = model(X, Y)
-                                loss = loss / self.config.gradient_accumulation_steps # scale the loss to account for gradient accumulation
+                                loss = loss / self.gradient_accumulation_steps # scale the loss to account for gradient accumulation
                             if scaler: # for GPU
                                 # backward pass, with gradient scaling if training in fp16
                                 scaler.scale(loss).backward()
                             else: # for TPU and CPU
                                 loss.backward()
                     else:
-                        with self.config.ctx:
+                        with self.ctx:
                                 logits, loss = model(X, Y)
-                                loss = loss / self.config.gradient_accumulation_steps # scale the loss to account for gradient accumulation
+                                loss = loss / self.gradient_accumulation_steps # scale the loss to account for gradient accumulation
                             if scaler: # for GPU
                                 # backward pass, with gradient scaling if training in fp16
                                 scaler.scale(loss).backward()
@@ -263,41 +319,43 @@ class Trainer:
                 if not is_accumulating:                   
                     
                     # clip the gradient
-                    if self.config.grad_clip != 0.0:
+                    if self.grad_clip != 0.0:
                         # step the optimizer and scaler 
                         if scaler:
                             scaler.unscale_(optimizer)
-                        torch.nn.utils.clip_grad_norm_(model.parameters(), self.config.grad_clip)
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), self.grad_clip)
                     
                     # optimizer step
-                    if self.config.device_type == "gpu" and scaler: # for single gpu or multi gpus devices within ddp container
+                    if self.device_type == "gpu" and scaler: # for single gpu or multi gpus devices within ddp container
                         # take optimizer step and update the scaling factor if training in fp16
                         scaler.step(optimizer)
                         scaler.update()
                         
-                    elif self.config.device_type == "tpu" and not self.config.tpu_ddp:
+                    elif self.device_type == "tpu" and not self.tpu_ddp:
                         xm.optimizer_step(optimizer)
 
                     # for cpu device or single tpu with multi core or multi tpu devices with multicore wrapped within ddp container
-                    elif (self.config.device_type == "tpu" and self.config.tpu_ddp) or self.config.device_type == "cpu":
+                    elif (self.device_type == "tpu" and self.tpu_ddp) or self.device_type == "cpu":
                         optimizer.step()
                     
                     # flush the gradients as soon as we can, no need for this memory anymore
                     optimizer.zero_grad(set_to_none=True)
-                    global_step+=1
+                    global_step += 1 # update (no. of model parameters adjustment) steps
+
+                # update local and global iteration nums
+                global_iter += 1
+                local_iter += 1
             
                 # timing and logging
                 t1 = time.perf_counter()
                 iter_time = t1 - iter_t0
 
-                if global_iter % self.config.log_interval == 0:
+                if global_iter % self.log_interval == 0:
                     # get loss as float. note: this is a CPU-GPU sync point
                     # scale up to undo the division above, approximating the true total loss (exact would have been a sum)
-                    lossf = loss.item() * self.config.gradient_accumulation_steps
+                    lossf = loss.item() * self.gradient_accumulation_steps
                     if local_iter >= 6: # let training settle a bit!
-                        self.logger.info(f"Local Iter: {local_iter}, Global Iter: {global_iter}, Total Steps: {global_step}, Loss: {lossf}, Time: {(iter_time*1000):.2f}ms, Estimated Remaining Hours: {(((t1 - total_t0) / (global_iter - initial_iter)) * (max_iters - global_iter) / 3600):.2f} hours, Estimated Remaining Days: {(((t1 - total_t0) / (global_iter - initial_iter)) * (max_iters - global_iter) / 3600 / 24):.2f} days")
+                        self.logger.info(f"Current Iteration: {local_iter}, Overall Iteration: {global_iter}, Total Steps: {global_step}, Loss: {lossf}, Time: {(iter_time*1000):.2f}ms, Estimated Remaining Hours: {(((t1 - total_t0) / (global_iter - initial_iter)) * (max_iters - global_iter) / 3600):.2f} hours, Estimated Remaining Days: {(((t1 - total_t0) / (global_iter - initial_iter)) * (max_iters - global_iter) / 3600 / 24):.2f} days")
                 
-                global_iter += 1
-                local_iter += 1
             
         return train_losses
