@@ -220,19 +220,27 @@ class Trainer:
                                 loss.backward()
                 
                 if not is_accumulating:                   
+                    
                     # clip the gradient
                     if self.config.grad_clip != 0.0:
-                        scaler.unscale_(optimizer)
+                        # step the optimizer and scaler 
+                        if scaler:
+                            scaler.unscale_(optimizer)
                         torch.nn.utils.clip_grad_norm_(model.parameters(), self.config.grad_clip)
-                    # step the optimizer and scaler if training in fp16
-                    if scaler:
+                    
+                    # optimizer step
+                    if self.config.device_type == "gpu" and scaler: # for single gpu or multi gpus devices within ddp container
+                        # take optimizer step and update the scaling factor if training in fp16
                         scaler.step(optimizer)
                         scaler.update()
-                    else:
-                        if self.config.device_type == "tpu" and self.config.tpu_ddp:
-                          optimizer.step()
-                        elif self.config.device_type == "tpu" and self.config.tpu_ddp:
-                          xm.optimizer_step(optimizer)
+                        
+                    elif self.config.device_type == "tpu" and not self.config.tpu_ddp:
+                        xm.optimizer_step(optimizer)
+
+                    # for cpu device or single tpu with multi core or multi tpu devices with multicore wrapped within ddp container
+                    elif (self.config.device_type == "tpu" and self.config.tpu_ddp) or self.config.device_type == "cpu":
+                        optimizer.step()
+                    
                     # flush the gradients as soon as we can, no need for this memory anymore
                     optimizer.zero_grad(set_to_none=True)
 
