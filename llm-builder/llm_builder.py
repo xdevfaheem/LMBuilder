@@ -18,7 +18,7 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
 from torch_xla.amp import autocast, GradScaler
 import sentencepiece as spm
-from trainer import Trainer, TrainerConfig
+from trainer import Trainer
 from dataclasses import dataclass
 from prepare_dataset import PrepareDataset
 from tokenizer import Tokenizer
