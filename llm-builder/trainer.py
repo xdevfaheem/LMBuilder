@@ -80,7 +80,7 @@ class Trainer:
         out["train"] = out["train"].mean()
         out["val"] = out["val"].mean()
         
-        del model #free up memory
+        del model # free up memory
         return out
     
     # learning rate decay scheduler (cosine with warmup)
@@ -158,38 +158,46 @@ class Trainer:
         
         return optimizer
     
-    def save_checkpoint(self, out_dir, model, optimizer, scaler, global_step, best_val_loss, epoch):
-        checkpoint_dir = os.path.join(out_dir, f"E{epoch}_iter{global_step}_ckpt.pt")
+    def save_checkpoint(self, out_dir, model, optimizer, scaler, global_iter, global_step, best_val_loss, epoch):
+        checkpoint_dir = os.path.join(out_dir, f"E{epoch}_It{global_iter}_ckpt.pt")
         checkpoint = {
                     'model': model.state_dict(),
                     'optimizer': optimizer.state_dict(),
                     'grad_scaler': scaler.state_dict(),
                     'model_args': self.config.model_args,
                     'global_step': global_step,
+                    'global_iter': global_iter,
                     'best_val_loss': best_val_loss,
+                    'epoch': epoch,
                     'config': self.config,
         }
         self.logger.info(f"saving checkpoint to {checkpoint_dir}")
         torch.save(checkpoint, checkpoint_dir)
     
     def train(self, model, optimizer):
-      
-        # local and global steps 
-        global_step=config.global_step
-        local_step=0
+        
+        # changing the scope of some frequently used variable into local
+        scaler = self.config.scaler # grad scaler
+        initial_iter=self.config.initial_iter
+        global_iter=self.config.global_iter # total number of iteration
+        max_iters=self.config.max_iters # maximum number of iterations
+        global_step=self.config.global_step # total model grad adjustment made so far
+        local_iter=0 # curent iteration number
         
         t0 = time.perf_counter()
-        if config.eval_only:
-            train_losses = torch.zeros(self.config.eval_interval)
-        else:
-            train_losses = torch.zeros(self.config.max_iters)
-        scaler = config.scaler # scaler only for GPU
-        # fetch the batch
+        
+        # initialising CombinedDatasetIterator ( check `__iter__` method in CombinedDataset)
         train_loader = iter(self.tbatch_genarator)
-        model.train()
+        model.train() # change the model to training mode
         
         for epoch in epochs:
-            self.logger.info(f"{'-'*25} Epoch:{epoch} {'-'*25}")
+            
+            if epoch != 0 and global_iter > 0:
+                self.logger.info(f"Resuming training from epoch: {epoch} and iteration: {global_iter}")
+            
+            elif epoch == 0 and global_iter == 0:
+                self.logger.info(f"Training Started!")
+                self.logger.info(f"{'-'*25} Epoch:{epoch} {'-'*25}")
             
             for X, Y in train_loader:
             
@@ -204,11 +212,12 @@ class Trainer:
                     param_group['lr'] = lr
 
                 # evaluate the loss on train/val sets and write checkpoints
-                if global_step % self.config.eval_interval == 0 and self.config.mastr_proc:
-                    losses_dict = self.validate_model(model, global_step, epoch)
-                    self.logger.info(f"Epoch: {epoch} - Step: {global_step} - Train loss: {losses_dict['train']:.4f} - Val loss: {losses_dict['val']:.4f}")
+                if global_iter % self.config.eval_interval == 0 and self.config.mastr_proc:
+                    losses_dict = self.validate_model(model, global_iter, epoch)
+                    self.logger.info(f"Epoch: {epoch} Total Iters: {global_iter} Total Steps: {global_step} Train loss: {losses_dict['train']:.4f} Val loss: {losses_dict['val']:.4f}")
                     if self.config.wandb_log:
                         wandb.log({
+                            "iters": global_iter,
                             "step": global_step,
                             "train_loss": losses_dict['train'],
                             "val_loss": losses_dict['val'],
@@ -216,14 +225,15 @@ class Trainer:
                         })
                     if losses_dict['val'] < self.config.best_val_loss or self.config.always_save_checkpoint:
                         best_val_loss = losses_dict['val']
-                        if global_step > 0:
-                            self.save_checkpoint(self.config.out_dir, model, optimizer, scaler, global_step, best_val_loss, epoch)
+                        if global_iter > 0:
+                            self.save_checkpoint(self.config.out_dir, model, optimizer, scaler, global_iter, global_step, best_val_loss, epoch)
                     if self.config.eval_only and global_step == 0:
                         logger.info(f"Training Stopped at {global_step}")
                         break
 
                 # forward backward update, with gradient accumulation to simulate larger batch size
                 # check if the gradients are accumulating or accumulated
+                iter_t0 = time.perf_counter()
                 is_accumulating = ((global_step+1) % self.config.gradient_accumulation_steps != 0 # +1 to prevent scale and backprop at gstep 0
                 
                 if is_accumulating:
@@ -274,21 +284,20 @@ class Trainer:
                     
                     # flush the gradients as soon as we can, no need for this memory anymore
                     optimizer.zero_grad(set_to_none=True)
-
+                    global_step+=1
+            
                 # timing and logging
                 t1 = time.perf_counter()
-                iter_time = t1 - t0
-                t0 = t1
+                iter_time = t1 - iter_t0
 
-                if global_step % self.config.log_interval == 0:
+                if global_iter % self.config.log_interval == 0:
                     # get loss as float. note: this is a CPU-GPU sync point
                     # scale up to undo the division above, approximating the true total loss (exact would have been a sum)
                     lossf = loss.item() * self.config.gradient_accumulation_steps
-                    if local_step >= 4: # let training settle a bit!
-                        self.logger.info(f"Step: {global_step} - Loss: {lossf} - Time: {iter_time*1000:.2f}ms")
-                        train_losses[global_step] = lossf
+                    if local_iter >= 6: # let training settle a bit!
+                        self.logger.info(f"Local Iter: {local_iter}, Global Iter: {global_iter}, Total Steps: {global_step}, Loss: {lossf}, Time: {(iter_time*1000):.2f}ms, Estimated Remaining Hours: {(((t1 - total_t0) / (global_iter - initial_iter)) * (max_iters - global_iter) / 3600):.2f} hours, Estimated Remaining Days: {(((t1 - total_t0) / (global_iter - initial_iter)) * (max_iters - global_iter) / 3600 / 24):.2f} days")
                 
-                global_step += 1
-                local_iter_num += 1
+                global_iter += 1
+                local_iter += 1
             
         return train_losses
