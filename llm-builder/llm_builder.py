@@ -84,6 +84,7 @@ class GPTBuilderConfig:
     wandb_run_name = 'gpt2'
     batch_size_per_device = 12
     block_size=1024
+    tpu_ddp=False
     gradient_accumulation_steps=40
     num_samples = int(1e10)
     learning_rate = 6e-4
@@ -128,6 +129,7 @@ class GPTBuilder:
         self.wandb_log = builder_config.wandb_log
         self.wandb_project = builder_config.wandb_project
         self.wandb_run_name = builder_config.wandb_run_name
+        self.tpu_ddp = tpu_ddp
         self.batch_size_per_device = builder_config.batch_size_per_device
         self.gradient_accumulation_steps = builder_config.gradient_accumulation_steps
         self.seed = builder_config.seed
@@ -163,44 +165,61 @@ class GPTBuilder:
             self.logger.info(f"Device: {device}, Datatype: {dtype}")
 
             # init these up here, can override if init_from='resume' (i.e. from a checkpoint)
-            global_iter = 0
-            initial_iter = 0
-            global_step = 0
+            global_iter=0
+            initial_iter=0
+            global_step=0
             best_val_loss = float("inf")
             current_epoch=0
 
             if self.device_type == "gpu":
 
                 # various inits, derived attributes, I/O setup
-                if self.ddp := int(os.environ.get('RANK', -1)) != -1:
+                if ddp := int(os.environ.get('RANK', -1)) != -1:
                     init_process_group(backend=backend)
                     rank = int(os.environ['RANK'])
                     local_rank = int(os.environ['LOCAL_RANK'])
                     world_size = int(os.environ['WORLD_SIZE'])
                     device = f'cuda:{local_rank}'
                     torch.cuda.set_device(device)
-                    master_process = rank == 0 # this process will do logging, checkpointing etc.
+                    master_process = (rank==0) # this process will do logging, checkpointing etc.
                     seed_offset = rank # each process gets a different seed
                     # world_size number of processes will be training simultaneously, so we can scale
                     # down the desired gradient accumulation iterations per process proportionally
+                
                 else:# if not ddp, we are running on a single gpu, and one process
                     master_process = True
-                    seed_offset = 0
+                    rank = 0
+                    local_rank = 0
+                    device = f'cuda:{local_rank}'
+                    torch.cuda.set_device(device)
+                    seed_offset = rank
                     world_size = 1
 
             elif self.device_type == "tpu":
 
-                master_process = xm.is_master_ordinal()
-                pass #TODO
+                if self.tpu_ddp:
+                    os.environ['MASTER_ADDR'] = 'localhost'
+                    os.environ['MASTER_PORT'] = '12355'
+                    rank = xm.get_ordinal()
+                    world_size = xm.xrt_world_size()
+                    init_process_group("xla", rank=rank, world_size=world_size)
+                    master_process = (rank==0)
+                    seed_offset = rank
 
+                else:
+                    master_process = xm.is_master_ordinal()
+                    rank = xm.get_ordinal()
+                    world_size = xm.xrt_world_size()
+                    seed_offset = rank
+                    
             elif self.device_type == "cpu":
 
                 master_process = True
-                seed_offset = 0
+                rank = 0
+                seed_offset = rank
                 world_size = 1
 
             else:
-
                 raise NotImplementedError("No other device types supported currently!")
 
             
@@ -334,8 +353,10 @@ class GPTBuilder:
             # wrap model into DDP container
             if self.ddp:
                 self.model = DDP(self.model, device_ids=[local_rank])
+            elif self.tpu_ddp:
+                self.model = DDP(self.model, gradient_as_bucket_view=True)
             
-            self.model = self.model.module if self.ddp else self.model
+            self.model = self.model.module if self.ddp else self.model # plug the model from ddp for multi-gpu keep the model as it is for tpu-ddp or single device
             
             self.logger.info("Setting up gradient scaler...")
             if self.device_type == 'tpu' or self.device_type == 'cpu':
@@ -363,7 +384,8 @@ class GPTBuilder:
                 total_epochs=self.num_epochs
                 scaler=scaler
                 device=device
-                ddp=self.ddp
+                ddp=ddp
+                tpu_ddp = self.tpu_ddp
                 decay_lr=self.decay_lr
                 learning_rate=self.learning_rate
                 eval_interval=self.eval_interval
