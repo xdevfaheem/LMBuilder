@@ -1,4 +1,3 @@
-
 import torch_xla.core.xla_model as xm
 import torch
 import matplotlib.pyplot as plt
@@ -6,6 +5,38 @@ import wandb
 import time
 import math
 import os
+import logging
+from contextlib import nullcontext
+
+@dataclass
+class TrainerConfig:
+    wandb_log=False
+    wandb_project=""
+    wandb_run_name=""
+    out_dir="./"
+    log_dir="./log"
+    logger=None
+    global_step=0
+    global_iter=0
+    initial_iter=0
+    best_val_loss=float(1000000.0)
+    curr_epoch=0
+    total_epochs=3
+    scaler=None
+    device=None
+    ddp=False
+    tpu_ddp = False
+    decay_lr=False
+    eval_interval=2000
+    always_save_checkpoint=True
+    model_args: dict = {}
+    eval_only=False
+    gradient_accumulation_steps=5
+    grad_clip=1.0
+    ctx=nullcontext()
+    log_interval=5
+    max_iters=600000
+    mastr_proc=False
                                                                 
 class Trainer:
     
