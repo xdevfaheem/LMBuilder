@@ -94,7 +94,8 @@ class Trainer:
         plt.grid(True)
         plt.savefig(os.path.join(self.plot_dir, f'E{epoch}_{global_step}_val_loss_curve.png'))
         #plt.show()
-    
+
+    @classmethod
     def configure_optimizers(self, weight_decay, learning_rate, betas, device_type):
         # first of all filter out all non-trainable parameters
         param_dict = {pn: p for pn, p in self.named_parameters() if p.requires_grad}
@@ -140,8 +141,8 @@ class Trainer:
         self.logger.info(f"saving checkpoint to {checkpoint_dir}")
         torch.save(checkpoint, checkpoint_dir)
     
-    def train(self, model):
-        optimizer = self.configure_optimizers(self.config.weight_decay, self.config.learning_rate, self.config.betas, self.config.device_type)
+    def train(self, model, optimizer):
+      
         # local and global steps 
         global_step=config.global_step
         local_step=0
