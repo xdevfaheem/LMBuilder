@@ -157,7 +157,7 @@ class GPTBuilder:
             train_logger = self._configure_logging(log_dir, "training")
             
             self.logger.info("Setting up host device...")
-            device = torch.device('cuda') if self.device_type == 'gpu' else xm.xla_device() if self.device_type == 'tpu' else torch.device('cpu') if self.device_type == 'cpu' else None
+            device = torch.cuda.current_device() if self.device_type == 'gpu' else xm.xla_device() if self.device_type == 'tpu' else torch.device('cpu') if self.device_type == 'cpu' else None
             assert device is not None, "Unsupported device!"
             dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16' # 'float32', 'bfloat16', or 'float16', the latter will auto implement a GradScaler
             self.logger.info(f"Device: {device}, Datatype: {dtype}")
