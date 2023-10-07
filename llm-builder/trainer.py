@@ -50,7 +50,7 @@ class Trainer:
         out["val"] = out["val"].mean()
         
         del model #free up memory
-        return out, 
+        return out
     
     # learning rate decay scheduler (cosine with warmup)
     def get_lr(self, it):
@@ -110,14 +110,20 @@ class Trainer:
         num_nodecay_params = sum(p.numel() for p in nodecay_params)
         self.logger.info(f"Number of tensors's weights will be decayed: {len(decay_params)}, with {num_decay_params:,} parameters")
         self.logger.info(f"Number of tensors's weights will not be decayed: {len(nodecay_params)}, with {num_nodecay_params:,} parameters")
+        
         # Create AdamW optimizer and use the fused version if it is available
-        if device_type == "cpu" or device_type == "cuda":
+        if device_type == "cpu":
+          optimizer = torch.optim.AdamW(optim_groups, lr=learning_rate, betas=betas, weight_decay=weight_decay)
+
+        elif device_type == "cuda":
             fused_available = 'fused' in inspect.signature(torch.optim.AdamW).parameters
             use_fused = fused_available and device_type == 'cuda'
             extra_args = dict(fused=True) if use_fused else dict()
             optimizer = torch.optim.AdamW(optim_groups, lr=learning_rate, betas=betas, weight_decay=weight_decay, **extra_args)
+            
         elif device_type == "tpu": # using syncfree optimizer to avoid the additional sync between device and host.
             optimizer = syncfree.AdamW(optim_groups, lr=learning_rate, betas=betas, weight_decay=weight_decay)
+        
         return optimizer
     
     def save_checkpoint(self, out_dir, model, optimizer, scaler, global_step, best_val_loss, epoch):
@@ -134,8 +140,8 @@ class Trainer:
         self.logger.info(f"saving checkpoint to {checkpoint_dir}")
         torch.save(checkpoint, checkpoint_dir)
     
-    def train(self, model, optimizer):
-        
+    def train(self, model):
+        optimizer = self.configure_optimizers(self.config.weight_decay, self.config.learning_rate, self.config.betas, self.config.device_type)
         # local and global steps 
         global_step=config.global_step
         local_step=0
