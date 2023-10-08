@@ -445,6 +445,7 @@ class LLMBuilder:
                 device=device,
                 ddp=ddp,
                 tpu_ddp = self.tpu_ddp,
+                pjrt_dist = self.pjrt_dist,
                 decay_lr=self.decay_lr,
                 eval_interval=self.eval_interval,
                 always_save_checkpoint=self.always_save_checkpoint,
