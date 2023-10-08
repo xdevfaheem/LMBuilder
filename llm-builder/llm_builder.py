@@ -72,6 +72,13 @@ class LLMBuilderConfig:
         pretrained_embeddings = None,
         freeze_embeddings = False,
     )
+    pl_kwargs = dict(
+        batchdim=0,
+        batches_per_execution=1,
+        loader_prefetch_size=8,
+        device_prefetch_size=4,
+        host_to_device_transfer_threads=1
+    )
     eval_interval = 2000
     total_epochs=2
     log_interval = 1
@@ -119,6 +126,7 @@ class LLMBuilder:
         self.data_dir = builder_config.data_dir
         self.dataset_dir = os.path.join(self.data_dir, "dataset_files")
         self.model_args = builder_config.model_configs
+        self.paraloader_kwargs = pl_kwargs
         self.eval_interval = builder_config.eval_interval
         self.num_epochs = builder_config.total_epochs
         self.log_interval = builder_config.log_interval
@@ -274,6 +282,8 @@ class LLMBuilder:
                                                 val_data_dir=val_data_dir,
                                                 seed=(self.seed + seed_offset)
         )
+        if self.device_type == "tpu":
+            train_dataloader, val_dataloader = train_dataloader.per_device_loader(device), val_dataloader.per_device_loader(device)
         
         self.logger.info("Setting up the tokenizer.")
         # Get the Vocablary Size of the dataset
@@ -500,7 +510,7 @@ class LLMBuilder:
         data_loader = DataLoader(combined_dataset, batch_size=batch_size, shuffle=False, collate_fn=collater, drop_last=True)
         
         if self.device_type == "tpu":
-            return pl.MpDeviceLoader(data_loader, device)
+            return pl.ParallelLoader(data_loader, device, **self.paraloader_kwargs)
         elif self.device_type == "cuda" or self.device_type == "cpu":
             return data_loader
         
