@@ -110,14 +110,16 @@ class LLMBuilderConfig:
     is_compile=True
     prepare_dataset=True
 
-#TODO: get a single config yaml file as an arg instead of all attributes
-gptconfig = GPTBuilderConfig({"train": [("tinystories", 1.0)], "test": [("tinystories", 1.0)]})
-
+"""
+Example usage:
+  #TODO: get a single config yaml file as an arg instead of all attributes
+  gptconfig = GPTBuilderConfig({"train": [("tinystories", 1.0)], "test": [("tinystories", 1.0)]})
+"""
 
 class LLMBuilder:
     
     
-    def __init__(self, builder_config=gptconfig):
+    def __init__(self, builder_config):
         
 # -------------------------------------configurations----------------------------------------------
 
