@@ -10,9 +10,13 @@ import torch_xla
 from torch.utils.data import Dataset, DataLoader, Sampler, BatchSampler
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
+import torch.distributed as dist
 from torch.distributed import init_process_group, destroy_process_group
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.runtime as xr
+from torch_xla.experimental import pjrt
+import torch_xla.experimental.pjrt_backend # moved to torch_xla.runtime
+import torch_xla.distributed.xla_backend
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
@@ -213,6 +217,10 @@ class LLMBuilder:
                 os.environ['PJRT_DEVICE'] = 'TPU'
                 rank = xm.get_ordinal()
                 world_size = xm.xrt_world_size()
+                """
+                If you use env://, MASTER_ADDR must be set to IP host that has device 0, which is not always worker 0.
+                The xla:// init_method finds this IP automatically.
+                """
                 dist.init_process_group('xla', init_method='xla://')
                 master_process = (rank==0)
                 seed_offset = rank
@@ -351,6 +359,9 @@ class LLMBuilder:
 
         self.logger.info("Moving the model to host device...")
         self.model.to(device) # move the initialized model to host device
+
+        if self.device_type == "tpu" and self.tpu_ddp and xr.using_pjrt():
+            xm.broadcast_master_param(self.model)
 
         # compile the model
         if self.compile:
