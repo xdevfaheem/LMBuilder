@@ -12,6 +12,7 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group, destroy_process_group
 import torch_xla.distributed.parallel_loader as pl
+import torch_xla.runtime as xr
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
@@ -208,11 +209,11 @@ class LLMBuilder:
         elif self.device_type == "tpu":
 
             if self.tpu_ddp:
-                os.environ['MASTER_ADDR'] = 'localhost'
-                os.environ['MASTER_PORT'] = '12355'
+                # Recommended: set PJRT_DEVICE to your local device type
+                os.environ['PJRT_DEVICE'] = 'TPU'
                 rank = xm.get_ordinal()
                 world_size = xm.xrt_world_size()
-                init_process_group("xla", rank=rank, world_size=world_size)
+                dist.init_process_group('xla', init_method='xla://')
                 master_process = (rank==0)
                 seed_offset = rank
 
