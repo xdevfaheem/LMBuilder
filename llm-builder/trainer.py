@@ -31,6 +31,7 @@ class Trainer:
                  device=None,
                  ddp=False,
                  tpu_ddp = False,
+                 pjrt_dist = True
                  decay_lr=False,
                  eval_interval=2000,
                  always_save_checkpoint=True,
@@ -62,6 +63,7 @@ class Trainer:
         self.device = device
         self.ddp = ddp
         self.tpu_ddp = tpu_ddp
+        self.pjrt_dist = pjrt_dist
         self.decay_lr = decay_lr
         self.eval_interval = eval_interval
         self.always_save_checkpoint = always_save_checkpoint
@@ -298,13 +300,21 @@ class Trainer:
                         torch.nn.utils.clip_grad_norm_(model.parameters(), self.grad_clip)
                     
                     # optimizer step
-                    if self.device_type == "gpu" and scaler: # for single gpu or multi gpus devices within ddp container
+
+                    # for gpu with grad scaler
+                    if self.device_type == "gpu" and scaler is not None: # for single gpu or multi gpus devices within ddp container
                         # take optimizer step and update the scaling factor if training in fp16
                         scaler.step(optimizer)
                         scaler.update()
+
+                    # for single tpu host with pjrt
+                    elif self.device_type == "tpu" and self.pjrt_dist:
+                        xm.optimizer_step()
+
+                    # for single tpu core
+                    elif self.device_type == "tpu" and (not self.tpu_ddp and not self.pjrt_dist):
+                        xm.optimizer_step(optimizer, barrier=True)
                         
-                    elif self.device_type == "tpu" and not self.tpu_ddp:
-                        xm.optimizer_step(optimizer)
 
                     # for cpu device or single tpu with multi core or multi tpu devices with multicore wrapped within ddp container
                     elif (self.device_type == "tpu" and self.tpu_ddp) or self.device_type == "cpu":
