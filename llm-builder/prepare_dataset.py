@@ -1,4 +1,3 @@
-
 # Importing the Necessary Libraries
 import os
 import time
@@ -82,6 +81,19 @@ class PrepareDataset:
         else:
             return DatasetDict(dataset_dict), final_splits
 
+    def create_custom_dataset(self, train_list, save_path="./", val_list=None):
+        
+        if val_list is not None:
+            dataset = DatasetDict({
+                'train': Dataset.from_dict({'text': train_list }),
+                'validation': Dataset.from_dict({'text': val_list}),
+            })
+        else:
+            dataset = DatasetDict({
+                'train': Dataset.from_dict({'text': train_list }),
+            })
+        dataset.save_to_disk(save_path)
+
     # an utilty function for writing the dataset into a txt file for training sentencepiece vocabulary
     def write_to_txt(self, file_path: str, dataset: dict):
         with open(file_path, 'w') as f:
@@ -155,7 +167,7 @@ class PrepareDataset:
         
         Calculate the total tokens using this:
         from tqdm.auto import tqdm
-        tokenizer = Tokenizer(model_path="/kaggle/working/datasets/tinystories/tinystories_8000.model", youtokenizer=False, sp_tokenizer=True)
+        tokenizer = Tokenizer(model_path="./tinystories_8000.model", youtokenizer=False, sp_tokenizer=True)
         print(train_dataset)
         total_tokens=0
         for datum in tqdm(train_dataset["text"], total=len(train_dataset["text"])):
@@ -196,6 +208,6 @@ class PrepareDataset:
         return data_dirs
     
 #if __name__ == '__main__':
-    #dset_files = {'train':'TinyStoriesV2-GPT4-train.txt', 'validation':'TinyStoriesV2-GPT4-valid.txt'}
-    #dataset_preparer = PrepareDataset("/kaggle/working/datasets/tinystories", hf_dataset="roneneldan/TinyStories", from_disk=True, local_dataset_path="/kaggle/working/datasets/tinystories/hf_dataset", dataset_files=dset_files, train_data_percentage=0.7, build_vocab=True, vocab_type="sp")
-    #dataset_preparer.prepare(max_length=1024)
+    # dset_files = {'train':'TinyStoriesV2-GPT4-train.txt', 'validation':'TinyStoriesV2-GPT4-valid.txt'}
+    # dataset_preparer = PrepareDataset("./tinystories", hf_dataset="roneneldan/TinyStories", from_disk=True, local_dataset_path="./tinystories/hf_dataset", dataset_files=dset_files, train_data_percentage=0.7, build_vocab=True, vocab_type="sp")
+    # dataset_preparer.prepare(max_length=1024)
