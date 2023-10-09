@@ -50,6 +50,8 @@ class LLMBuilderConfig:
         hf_dataset="Bingsu/openwebtext_20p",
         from_disk=False,
         local_dataset_path=None,
+        training_dset_list=[],
+        val_dset_list=None,
         dataset_files= None,
         num_blocks=1024,
         train_data_percentage= 0.8,
