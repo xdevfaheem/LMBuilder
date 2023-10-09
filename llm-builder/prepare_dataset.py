@@ -14,13 +14,36 @@ from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
 class PrepareDataset:
                     
-    def __init__(self, dataset_folder, hf_dataset="Bingsu/openwebtext_20p", from_disk: bool = False, local_dataset_path=None, dataset_files=None, train_data_percentage=0.8, dset_prefix="tinystories", build_vocab=False, vocab_size=8000, vocab_type="yt", eos=1, bos=0, pad=2, unk=3, **kwargs):
+    def __init__(self,
+                 dataset_folder,
+                 hf_dataset="Bingsu/openwebtext_20p",
+                 dataset_files=None,
+                 from_disk: bool = False,
+                 local_dataset_path=None,
+                 train_dset_list=None,
+                 val_dset_list=None,
+                 tratrain_data_percentage=0.8,
+                 dset_prefix="tinystories",
+                 build_vocab=False,
+                 vocab_size=8000,
+                 vocab_type="yt",
+                 eos=1,
+                 bos=0,
+                 pad=2,
+                 unk=3,
+                 **kwargs
+                ):
         
         self.dataset_folder = dataset_folder
         self.dataset_files_folder = os.path.join(self.dataset_folder, "dataset_files")
         os.makedirs(self.dataset_files_folder, exist_ok=True)
         self.data_txt_path = os.path.join(dataset_folder, f'{dset_prefix}.txt')
         self.dset_prefix = dset_prefix
+
+        if from_disk:
+            if not os.path.exists(local_dataset_path):
+                assert (train_dset_list), "atleast train dataset `text` list should be passed" # val_dset_list is optional as validation set will be splitted from train set 
+                self.create_custom_dataset(train_dset_list, local_dataset_path, val_list=val_dset_list)
         
         if build_vocab:
             self.splitted_dataset, self.dataset_splits = self.load_dsets(hf_dataset, data_files=dataset_files, from_disk=from_disk, dataset_path=local_dataset_path, train_p=train_data_percentage)
@@ -81,7 +104,7 @@ class PrepareDataset:
         else:
             return DatasetDict(dataset_dict), final_splits
 
-    def create_custom_dataset(self, train_list, save_path="./", val_list=None):
+    def create_custom_dataset(self, train_list, save_path, val_list=None):
         
         if val_list is not None:
             dataset = DatasetDict({
