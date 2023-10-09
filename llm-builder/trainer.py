@@ -87,6 +87,10 @@ class Trainer:
     @torch.no_grad()
     def validate_model(self, model, global_step, epoch):
         
+        """
+        Estimate loss over train and val splits using many batches
+        """
+        
         # dict for saving the loss values
         out = {}
         model.eval()
@@ -115,6 +119,11 @@ class Trainer:
     
     # learning rate decay scheduler (cosine with warmup)
     def get_lr(self, it):
+        
+        """
+        Learning rate decay scheduler (cosine with warmup)
+        """
+        
         # 1) linear warmup for warmup_iters steps
         if it < warmup_iters:
             return learning_rate * it / warmup_iters
@@ -128,7 +137,11 @@ class Trainer:
         return min_lr + coeff * (learning_rate - min_lr)
     
     def save_eval_loss_curves(self, loss_data, global_step, epoch):
-    
+        
+        """
+        Save loss curves for visualization
+        """
+
         train_losses = loss_data['train']
         val_losses = loss_data['val']
 
@@ -158,6 +171,11 @@ class Trainer:
 
     @classmethod
     def configure_optimizers(self, weight_decay, learning_rate, betas, device_type):
+
+        """
+        Configure the optimizer based on provided parameters
+        """
+        
         # first of all filter out all non-trainable parameters
         param_dict = {pn: p for pn, p in self.named_parameters() if p.requires_grad}
         # create optim groups. Any parameters that is 2D will be weight decayed, otherwise no.
@@ -189,6 +207,11 @@ class Trainer:
         return optimizer
     
     def save_checkpoint(self, out_dir, model, optimizer, scaler, global_iter, global_step, best_val_loss, epoch):
+
+        """
+        Save model checkpoint
+        """
+        
         checkpoint_dir = os.path.join(out_dir, f"E{epoch}_It{global_iter}_ckpt.pt")
         checkpoint = {
                     'model': model.state_dict(),
@@ -205,6 +228,10 @@ class Trainer:
         torch.save(checkpoint, checkpoint_dir)
     
     def train(self, model, optimizer):
+
+        """
+        Train the model
+        """
         
         # changing the scope of some frequently used variable into local
         scaler = self.scaler # grad scaler
