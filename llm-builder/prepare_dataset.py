@@ -16,7 +16,7 @@ class PrepareDataset:
                     
     def __init__(self,
                  dataset_folder,
-                 hf_dataset="Bingsu/openwebtext_20p",
+                 hf_dataset=None,
                  dataset_files=None,
                  from_disk: bool = False,
                  local_dataset_path=None,
@@ -46,7 +46,7 @@ class PrepareDataset:
                 self.create_custom_dataset(train_dset_list, local_dataset_path, val_list=val_dset_list)
         
         if build_vocab:
-            self.splitted_dataset, self.dataset_splits = self.load_dsets(hf_dataset, data_files=dataset_files, from_disk=from_disk, dataset_path=local_dataset_path, train_p=train_data_percentage)
+            self.splitted_dataset, self.dataset_splits = self.load_dsets(hf_dset_name=hf_dataset, data_files=dataset_files, from_disk=from_disk, dataset_path=local_dataset_path, train_p=train_data_percentage)
             print("\nDataset: ",self.splitted_dataset, flush=True)
             # vocabulary model path of the trained vocab
             vocab_path = self.build_vocabulary(self.splitted_dataset, vocab_prefix=self.dset_prefix, vocab_size=vocab_size, vocab_model_type=vocab_type, eos_id=eos, bos_id=bos, pad_id=pad, unk_id=unk)
@@ -60,12 +60,14 @@ class PrepareDataset:
                 setattr(self.tokenizer, "bos_id", bos)
                 
         else:
-            self.splitted_dataset, self.dataset_splits = self.load_dsets(hf_dataset, data_files=dataset_files, from_disk=from_disk, dataset_path=local_dataset_path, train_p=train_data_percentage)
+            self.splitted_dataset, self.dataset_splits = self.load_dsets(hf_dset_name=hf_dataset, data_files=dataset_files, from_disk=from_disk, dataset_path=local_dataset_path, train_p=train_data_percentage)
             # loading openai's tiktoken bpe tokenizer
             self.tokenizer = Tokenizer(model_path=None, tiktokenizer=True)
         
     # an utility function for loading the hugging face dataset
-    def load_dsets(self, name: str, from_disk=False, data_files: dict=None, dataset_path=None, train_p: float = 0.9):
+    def load_dsets(self, hf_dset_name: str = None, from_disk=False, data_files: dict=None, dataset_path=None, train_p: float = 0.9):
+
+        assert ((from_disk and dataset_path) or hf_dset_name is not None), "the Dataset Should be Either loaded from local path or from hugging face dataset repo"
         
         if from_disk:
             print("\nLoading dataset from the disk...")
@@ -76,12 +78,12 @@ class PrepareDataset:
             print("\nLoading dataset from huggingface...")
             p = train_p*100
             dataset_dict = {}
-            splits = get_dataset_split_names(name)
+            splits = get_dataset_split_names(hf_dset_name)
             for split in splits:
                 if split=="train":
-                    dataset = datasets.load_dataset(name, data_files=data_files, split=datasets.ReadInstruction(split, from_=0, to=p, unit='%'), num_proc=int(os.cpu_count())//2)
+                    dataset = datasets.load_dataset(hf_dset_name, data_files=data_files, split=datasets.ReadInstruction(split, from_=0, to=p, unit='%'), num_proc=int(os.cpu_count())//2)
                 else:
-                    dataset = datasets.load_dataset(name, data_files=data_files, split=split, num_proc=int(os.cpu_count())//2)
+                    dataset = datasets.load_dataset(hf_dset_name, data_files=data_files, split=split, num_proc=int(os.cpu_count())//2)
                 dataset_dict[split] = Dataset.from_dict({'text': dataset["text"]})
 
         if len(dataset_dict) == 1:
