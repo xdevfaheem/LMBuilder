@@ -22,7 +22,7 @@ class PrepareDataset:
                  local_dataset_path=None,
                  train_dset_list=None,
                  val_dset_list=None,
-                 tratrain_data_percentage=0.8,
+                 train_data_percentage=0.8,
                  dset_prefix="tinystories",
                  build_vocab=False,
                  vocab_size=8000,
