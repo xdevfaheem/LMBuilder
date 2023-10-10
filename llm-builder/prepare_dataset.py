@@ -33,6 +33,32 @@ class PrepareDataset:
                  unk=3,
                  **kwargs
                 ):
+
+        """
+        Initialize the PrepareDataset class (load dataset, build vocabulary and loading tokenizer instance for preaparing the dataset).
+
+        Args:
+            dataset_folder (str): Path to the dataset folder.
+            hf_dataset (str, optional): Hugging Face dataset name.
+            dataset_files (dict, optional): Dictionary containing dataset file names.
+            from_disk (bool, optional): Whether to load the dataset from disk.
+            local_dataset_path (str, optional): Path to the locally saved dataset.
+            train_dset_list (list, optional): List of training dataset text.
+            val_dset_list (list, optional): List of validation dataset text.
+            train_data_percentage (float, optional): Percentage of data to use for training.
+            dset_prefix (str, optional): Prefix for dataset files.
+            build_vocab (bool, optional): Whether to build a vocabulary.
+            vocab_size (int, optional): Size of the vocabulary.
+            vocab_type (str, optional): Type of vocabulary to build ("yt" for Youtokentome, "sp" for SentencePiece).
+            eos (int, optional): EOS token ID.
+            bos (int, optional): BOS token ID.
+            pad (int, optional): PAD token ID.
+            unk (int, optional): UNK token ID.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            None
+        """
         
         self.dataset_folder = dataset_folder
         self.dataset_files_folder = os.path.join(self.dataset_folder, "dataset_files")
@@ -64,8 +90,23 @@ class PrepareDataset:
             # loading openai's tiktoken bpe tokenizer
             self.tokenizer = Tokenizer(model_path=None, tiktokenizer=True)
         
-    # an utility function for loading the hugging face dataset
+    # Utility function for loading the Hugging Face dataset either from local disk or from the Hub
     def load_dsets(self, hf_dset_name: str = None, from_disk=False, data_files: dict=None, dataset_path=None, train_p: float = 0.9):
+
+        """
+        Load and organize the dataset either from Hugging Face or from disk.
+
+        Args:
+            hf_dset_name (str, optional): Hugging Face dataset name.
+            from_disk (bool, optional): Whether to load the dataset from disk.
+            data_files (dict, optional): Dictionary containing dataset file names.
+            dataset_path (str, optional): Path to the locally saved dataset.
+            train_p (float, optional): Percentage of data to use for training.
+
+        Returns:
+            dataset_dict (dict): Dictionary containing split datasets.
+            final_splits (list): List of split names.
+        """
 
         assert ((from_disk and dataset_path) or hf_dset_name is not None), "the Dataset Should be Either loaded from local path or from hugging face dataset repo"
         
@@ -106,7 +147,20 @@ class PrepareDataset:
         else:
             return DatasetDict(dataset_dict), final_splits
 
+    # Utility function for creating a custom dataset and saving it to disk
     def create_custom_dataset(self, train_list, save_path, val_list=None):
+
+        """
+        Create a custom dataset and save it to disk.
+
+        Args:
+            train_list (list): List of training dataset text.
+            save_path (str): Path to save the custom dataset.
+            val_list (list, optional): List of validation dataset text.
+
+        Returns:
+            None
+        """
         
         if val_list is not None:
             dataset = DatasetDict({
@@ -119,8 +173,17 @@ class PrepareDataset:
             })
         dataset.save_to_disk(save_path)
 
-    # an utilty function for writing the dataset into a txt file for training sentencepiece vocabulary
+    # an utilty function for writing the dataset into a txt file for training the vocabulary
     def write_to_txt(self, file_path: str, dataset: dict):
+        """
+        Write the dataset to a text file.
+        
+        Args:
+            file_path (str): Path to the output text file.
+            dataset (dict): Dictionary containing split datasets.
+        Returns:
+            file_path (str): Path to the output text file.
+        """
         with open(file_path, 'w') as f:
             for split in self.dataset_splits:
                 for sentence in tqdm(dataset[split]["text"], total=len(dataset[split]["text"]), desc=f"Writing {split} dataset to txt file"):
@@ -129,38 +192,70 @@ class PrepareDataset:
 
     # an utility function to train vocabulary for the dataset using sentencepiece trainer
     def build_vocabulary(self, dataset: datasets.DatasetDict, vocab_prefix: str = 'vocab', vocab_size: int = 8000, vocab_model_type="yt", pad_id: int = 3, unk_id: int = 2, eos_id: int = 1, bos_id: int = 0):
-            
-            sp = True if vocab_model_type=="sp" else False
-            yt = True if vocab_model_type=="yt" else False
-            
-            print("\nChecking whether the vocabulary file already exist...")
-            if not os.path.isfile(os.path.join(self.dataset_folder, f"{vocab_prefix}_{vocab_size}.model")):
-                
-                print(f"Going to create a vocabulary using `{'SentencePiece' if sp else 'Youtokentome'}` for this dataset as it doesn't already exist \nChecking whether the dataset txt file exist to build vocab file")
-                if not os.path.isfile(self.data_txt_path):
-                    print("Writing Dataset to a txt file as it doesn't already exist")
-                    data_txt_path = self.write_to_txt(self.data_txt_path, dataset)
-                    
-                else:
-                    print("Not going to write the dataset to a txt file as it already exist")
-                    data_txt_path = self.data_txt_path
-                    
-                try:
-                    print(f"Training the `{'SentencePiece' if sp else 'Youtokentome'}` Vocab with: \nFile Prefix: {vocab_prefix} \nVocab Size: {vocab_size} \nPAD ID: {pad_id} \nEOS ID: {eos_id} \nUNK ID: {unk_id} \nBOS ID: {bos_id} \n", flush=True)
-                    Tokenizer.train(data_txt_path, self.dataset_folder, youtokenizer=yt, sp_tokenizer=sp, vocab_file_prefix=vocab_prefix, vocab_size=vocab_size, pad_id=pad_id, unk_id=unk_id, eos_id=eos_id, bos_id=bos_id)
-                    print("Vocabulary Created Successfully!")
-                
-                except Exception as e:
-                    print("An error occurred during vocabulary training:", e)
 
-                return os.path.join(self.dataset_folder, f"{vocab_prefix}_{vocab_size}.model")
+        """
+        Train a vocabulary for the dataset using SentencePiece or Youtokentome.
 
+        Args:
+            dataset (datasets.DatasetDict): Dictionary containing split datasets.
+            vocab_prefix (str, optional): Prefix for the vocabulary model.
+            vocab_size (int, optional): Size of the vocabulary.
+            vocab_model_type (str, optional): Type of vocabulary model ("yt" for Youtokentome, "sp" for SentencePiece).
+            pad_id (int, optional): PAD token ID.
+            unk_id (int, optional): UNK token ID.
+            eos_id (int, optional): EOS token ID.
+            bos_id (int, optional): BOS token ID.
+
+        Returns:
+            vocab_path (str): Path to the trained vocabulary model.
+        """
+        
+        sp = True if vocab_model_type=="sp" else False
+        yt = True if vocab_model_type=="yt" else False
+        
+        print("\nChecking whether the vocabulary file already exist...")
+        if not os.path.isfile(os.path.join(self.dataset_folder, f"{vocab_prefix}_{vocab_size}.model")):
+            
+            print(f"Going to create a vocabulary using `{'SentencePiece' if sp else 'Youtokentome'}` for this dataset as it doesn't already exist \nChecking whether the dataset txt file exist to build vocab file")
+            if not os.path.isfile(self.data_txt_path):
+                print("Writing Dataset to a txt file as it doesn't already exist")
+                data_txt_path = self.write_to_txt(self.data_txt_path, dataset)
+                
             else:
-                print("Vocabulary File Already Exist! Won't Train an other.\n")
-                return os.path.join(self.dataset_folder, f"{vocab_prefix}_{vocab_size}.model")
+                print("Not going to write the dataset to a txt file as it already exist")
+                data_txt_path = self.data_txt_path
+                
+            try:
+                print(f"Training the `{'SentencePiece' if sp else 'Youtokentome'}` Vocab with: \nFile Prefix: {vocab_prefix} \nVocab Size: {vocab_size} \nPAD ID: {pad_id} \nEOS ID: {eos_id} \nUNK ID: {unk_id} \nBOS ID: {bos_id} \n", flush=True)
+                Tokenizer.train(data_txt_path, self.dataset_folder, youtokenizer=yt, sp_tokenizer=sp, vocab_file_prefix=vocab_prefix, vocab_size=vocab_size, pad_id=pad_id, unk_id=unk_id, eos_id=eos_id, bos_id=bos_id)
+                print("Vocabulary Created Successfully!")
             
-    # a function for preparing the dateset by preparing a shard of the dataset and tracking time
+            except Exception as e:
+                print("An error occurred during vocabulary training:", e)
+
+            return os.path.join(self.dataset_folder, f"{vocab_prefix}_{vocab_size}.model")
+
+        else:
+            print("Vocabulary File Already Exist! Won't Train an other.\n")
+            return os.path.join(self.dataset_folder, f"{vocab_prefix}_{vocab_size}.model")
+            
+    # an utility function for preparing the dateset by preparing a shard of the dataset and tracking time
     def prepare_dataset(self, split: str, dataset: datasets.Dataset, max_length: int, num_blocks: int, i: int, mode="process"):
+
+        """
+        Prepare a shard of the dataset and track time.
+
+        Args:
+            split (str): Split name (e.g., "train", "val").
+            dataset (datasets.Dataset): Dataset (Sharded) to prepare. 
+            max_length (int): Maximum length of each example.
+            num_blocks (int): Number of blocks.
+            i (int): Process/thread ID.
+            mode (str, optional): Processing mode ("process" or "thread").
+
+        Returns:
+            None
+        """
         
         current = current_process()
         if mode=="process":
@@ -205,6 +300,17 @@ class PrepareDataset:
         
     # prepare the memmory maped binary file dataset
     def prepare(self, max_length: int = 512, num_blocks: int = 1024):
+
+        """
+        Prepare PackedDataset.
+
+        Args:
+            max_length (int, optional): Maximum length of single aggregated block.
+            num_blocks (int, optional): Number of blocks.
+
+        Returns:
+            data_dirs (list): List of data directories.
+        """
         
         data_dirs = []
         
@@ -234,7 +340,8 @@ class PrepareDataset:
                 list(executor.map(prepare_shard, [(split, num_process, max_length, num_blocks, process_id, mode) for process_id in range(num_process)], chunksize=1))
         
         return data_dirs
-    
+
+# Uncomment the following lines if you want to run the code as a script
 #if __name__ == '__main__':
     # dset_files = {'train':'TinyStoriesV2-GPT4-train.txt', 'validation':'TinyStoriesV2-GPT4-valid.txt'}
     # dataset_preparer = PrepareDataset("./tinystories", hf_dataset="roneneldan/TinyStories", from_disk=True, local_dataset_path="./tinystories/hf_dataset", dataset_files=dset_files, train_data_percentage=0.7, build_vocab=True, vocab_type="sp")
