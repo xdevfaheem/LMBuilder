@@ -1,4 +1,4 @@
-
+# Neccessary packages
 import os
 import struct
 import random
@@ -6,6 +6,7 @@ import numpy as np
 import torch
 from torch.utils.data import IterableDataset, get_worker_info
 
+# Dictionary to map data types to codes
 dtypes = {
     1: np.uint8,
     2: np.int8,
@@ -17,20 +18,53 @@ dtypes = {
     8: np.uint16,
 }
 
-
+# Function to find the code for a given data type
 def code(dtype):
+    
+    """Finds the code for a given data type.
+    Args:
+        dtype: Data type to find the code for.
+    Returns:
+        int: Code corresponding to the data type.
+    """
+    
     for k in dtypes.keys():
         if dtypes[k] == dtype:
             return k
     raise ValueError(dtype)
 
-
+# Header constants
 HDR_MAGIC = b"LITPKDS"
 HDR_SIZE = 24  # bytes
 
-# Distributed Sampler as Iterable-Style Dataset don't sampler for DDP
+# IterableDataset for distributed sampling as iterable-style dataset don't support sampler for DDP.
 class PackedDataset(IterableDataset):
-    def __init__(self, filenames, n_chunks, block_size, seed=12345, shuffle=True, wrap=False, num_processes=1, process_rank=0):
+    
+    def __init__(self,
+                 filenames,
+                 n_chunks,
+                 block_size,
+                 seed=12345,
+                 shuffle=True,
+                 wrap=False,
+                 num_processes=1,
+                 process_rank=0
+                ):
+
+        """
+        Initializes an IterableDataset for distributed sampling.
+
+        Args:
+            filenames (list): List of filenames.
+            n_chunks (int): Number of data chunks to load.
+            block_size (int): Size of each data block.
+            seed (int): Random seed for shuffling.
+            shuffle (bool): Whether to shuffle the data chunks.
+            wrap (bool): Whether to wrap around the dataset when reaching the end.
+            num_processes (int): Number of processes for distributed sampling.
+            process_rank (int): Rank of the current process for distributed sampling.
+        """
+        
         self._filenames = filenames
         self._n_chunks = n_chunks
         self._block_size = block_size
@@ -41,6 +75,12 @@ class PackedDataset(IterableDataset):
         self._process_rank = process_rank
 
     def __iter__(self):
+
+        """
+        Returns:
+            Initialize an PackedDatasetIterator (Iterable type Dataset) with set of distinctive memorymap file based on the num_processes and process_rank
+        """
+        
         worker_info = get_worker_info()
         num_workers = worker_info.num_workers if worker_info is not None else 1
         worker_id = worker_info.id if worker_info is not None else 0
@@ -78,6 +118,19 @@ class PackedDatasetBuilder(object):
         dtype="auto",
         vocab_size=None,
     ):
+
+        """
+        Initializes a class to build PackedDataset.
+
+        Args:
+            outdir (str): Output directory for storing dataset files.
+            prefix (str): Prefix for dataset file names.
+            chunk_size (int): Size of each data chunk.
+            sep_token (int): Separator token to fill empty space.
+            dtype (str): Data type of the dataset (default is "auto").
+            vocab_size (int): Vocabulary size (required when dtype is "auto").
+        """
+        
         if dtype == "auto":
             if vocab_size is None:
                 raise ValueError("vocab_size cannot be None when dtype='auto'")
@@ -100,6 +153,9 @@ class PackedDatasetBuilder(object):
         self._filenames = []
 
     def _write_chunk(self):
+        """
+        Writes a data chunk to a binary file.
+        """
         filename = f"{self._prefix}_{self._counter:010d}.bin"
         filename = os.path.join(self._outdir, filename)
 
@@ -117,13 +173,25 @@ class PackedDatasetBuilder(object):
 
     @property
     def dtype(self):
+        """
+        Returns the data type of the dataset.
+        """
         return self._dtype
 
     @property
     def filenames(self):
+        """
+        Returns a list of dataset file names.
+        """
         return self._filenames.copy()
 
     def add_array(self, arr):
+        """
+        Adds a numpy array to the PackedDataset.
+
+        Args:
+            arr (np.ndarray): Numpy array to add to the dataset.
+        """
         while self._idx + arr.shape[0] > self._chunk_size:
             part_len = self._chunk_size - self._idx
             self._arr[self._idx : self._idx + part_len] = arr[:part_len]
@@ -135,11 +203,28 @@ class PackedDatasetBuilder(object):
         self._idx += arr_len
 
     def write_reminder(self):
+        """
+        Writes any remaining data to chunks.
+        """
         self._write_chunk()
 
 
 class PackedDatasetIterator:
+    
     def __init__(self, filenames, n_chunks, block_size, seed, shuffle, wrap):
+        
+        """
+        Initializes an iterator for PackedDataset.
+
+        Args:
+            filenames (list): List of filenames.
+            n_chunks (int): Number of data chunks to load.
+            block_size (int): Size of each data block.
+            seed (int): Random seed for shuffling.
+            shuffle (bool): Whether to shuffle the data chunks.
+            wrap (bool): Whether to wrap around the dataset when reaching the end.
+        """
+        
         self._seed = seed
         self._shuffle = shuffle
         self._rng = np.random.default_rng(seed) if shuffle else None
@@ -168,6 +253,15 @@ class PackedDatasetIterator:
         self._load_n_chunks()
 
     def _read_header(self, path):
+
+        """
+        Reads header information from a binary file.
+        Args:
+            path (str): File path to the binary file.
+        Returns:
+            tuple: Tuple containing data type and chunk size.
+        """
+        
         with open(path, "rb") as f:
             magic = f.read(len(HDR_MAGIC))
             assert magic == HDR_MAGIC, "File doesn't match expected format."
@@ -179,10 +273,16 @@ class PackedDatasetIterator:
         return dtype, chunk_size
 
     def _close_mmaps(self):
+        """
+        Closes memory-mapped files.
+        """
         for mmap in self._mmaps:
             mmap._mmap.close()
 
     def _load_n_chunks(self):
+        """
+        Loads a new set of data chunks from files.
+        """
         self._close_mmaps()
         self._mmaps = []
         self._buffers = []
@@ -216,14 +316,23 @@ class PackedDatasetIterator:
         self._curr_idx = 0
 
     def __del__(self):
+        """
+        Destructor to close resources.
+        """
         self._close_mmaps()
         del self._mmaps
         del self._buffers
 
     def __iter__(self):
+        """
+        Makes the PackedDatasetIterator's attributes accessible 
+        """
         return self
 
     def __next__(self):
+        """
+        Returns the next data block as a PyTorch tensor (torch.Tensor).
+        """
         # Check if all blocks in the current chunk have been used
         if self._curr_idx >= len(self._block_idxs):
              # Load the next set of chunks from the dataset files
@@ -249,7 +358,16 @@ class PackedDatasetIterator:
     
 
 class CombinedDataset(IterableDataset):
+    
     def __init__(self, datasets, seed, weights=None):
+        """
+        Initializes an IterableDataset for combining multiple datasets.
+        
+        Args:
+            datasets (list): List of datasets build by PackedDatasetBuilder.
+            seed (int): Random seed for dataset selection.
+            weights (list): List of weights for dataset selection (default is None).
+        """
         self._seed = seed
         self._datasets = datasets
         self._weights = weights
@@ -258,15 +376,30 @@ class CombinedDataset(IterableDataset):
             self._weights = [1 / n_datasets] * n_datasets
 
     def __iter__(self):
+        """
+        Initialize the CombinedDatasetIterator class with gotten args.
+        """
         return CombinedDatasetIterator(self._datasets, self._seed, self._weights)
 
 
 class CombinedDatasetIterator:
+    
     def __init__(self, datasets, seed, weights):
+        """
+        Initializes an iterator for CombinedDataset.
+
+        Args:
+            datasets (list): List of datasets to combine.
+            seed (int): Random seed for dataset selection.
+            weights (list): List of weights for dataset selection.
+        """
         self._datasets = [iter(el) for el in datasets]
         self._weights = weights
         self._rng = random.Random(seed)
 
     def __next__(self):
+        """
+        Returns the next element from one of the datasets as a PyTorch tensor.
+        """
         dataset, = self._rng.choices(self._datasets, weights=self._weights, k=1)
         return next(dataset)
