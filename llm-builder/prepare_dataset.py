@@ -147,7 +147,7 @@ class PrepareDataset:
                     
                 try:
                     print(f"Training the `{'SentencePiece' if sp else 'Youtokentome'}` Vocab with: \nFile Prefix: {vocab_prefix} \nVocab Size: {vocab_size} \nPAD ID: {pad_id} \nEOS ID: {eos_id} \nUNK ID: {unk_id} \nBOS ID: {bos_id} \n", flush=True)
-                    Tokenizer.train(data_txt_path, self.dataset_folder, youtokenizer=yt, sentencep=sp, vocab_file_prefix=vocab_prefix, vocab_size=vocab_size, pad_id=pad_id, unk_id=unk_id, eos_id=eos_id, bos_id=bos_id)
+                    Tokenizer.train(data_txt_path, self.dataset_folder, youtokenizer=yt, sp_tokenizer=sp, vocab_file_prefix=vocab_prefix, vocab_size=vocab_size, pad_id=pad_id, unk_id=unk_id, eos_id=eos_id, bos_id=bos_id)
                     print("Vocabulary Created Successfully!")
                 
                 except Exception as e:
