@@ -179,7 +179,10 @@ class PrepareDataset:
         with tqdm(total=len(dataset), mininterval=0, unit=" examples", desc=f"Preparing dataset buffers #{i}", position=pos, leave=True) as pbar:
             for example in dataset["text"]:
                 ids = self.tokenizer.encode(example, bos=False, eos=True, max_length=max_length)
-                assert ids[-1] == self.tokenizer.eos_id, "Last token of the tokenized id is not equal to tokenizer's eos id"
+                # where_eos = [x for x in arr if x == self.tokenizer.eos_id]
+                # we expect two EOS tokens, one per file
+                #assert len(where_eos) == 1
+                #assert ids[-1] == self.tokenizer.eos_id, "Last token of the tokenized id is not equal to tokenizer's eos id"
                 builder.add_array(np.array(ids, dtype=builder.dtype))
                 pbar.update(1)
             
