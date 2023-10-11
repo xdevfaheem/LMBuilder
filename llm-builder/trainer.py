@@ -25,7 +25,7 @@ class Trainer:
                  global_iter=0,
                  initial_iter=0,
                  best_val_loss=float(1000000.0),
-                 losses_list=None
+                 losses_list=None,
                  curr_epoch=0,
                  total_epochs=3,
                  scaler=None,
@@ -34,6 +34,10 @@ class Trainer:
                  tpu_ddp = False,
                  pjrt_dist = True
                  decay_lr=False,
+                 warmup_iters=2000,
+                 learning_rate = 6e-4,
+                 lr_decay_iters = 600000,
+                 min_lr = 6e-5,
                  eval_interval=2000,
                  always_save_checkpoint=True,
                  model_args: dict = {},
@@ -71,6 +75,10 @@ class Trainer:
             tpu_ddp (bool): Use TPU DistributedDataParallel for training.
             pjrt_dist (bool): Use PJRT (PyTorch JIT-Ready Training) for TPU.
             decay_lr (bool): whether to Apply learning rate decay.
+            warmup_iters (int): Number of warm-up iterations.
+            learning_rate (float): Initial learning rate.
+            lr_decay_iters (int): Number of iterations for learning rate decay.
+            min_lr (float): Minimum learning rate.
             eval_interval (int): Evaluation interval.
             always_save_checkpoint (bool): Always save model checkpoints.
             model_args (dict): Model configuration.
