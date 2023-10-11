@@ -169,8 +169,8 @@ class Trainer:
         plt.savefig(os.path.join(self.plot_dir, f'E{epoch}_{global_step}_val_loss_curve.png'))
         #plt.show()
 
-    @classmethod
-    def configure_optimizers(self, weight_decay, learning_rate, betas, device_type):
+    @staticmethod
+    def configure_optimizers(weight_decay, learning_rate, betas, device_type):
 
         """
         Configure the optimizer based on provided parameters
