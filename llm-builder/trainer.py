@@ -44,6 +44,42 @@ class Trainer:
                  max_iters=600000,
                  mastr_proc=False,
         ):
+
+        """
+        Initialize the Trainer.
+
+        Args:
+            train_loader (DataLoader): Training data loader.
+            val_loader (DataLoader): Validation data loader.
+            wandb_log (bool): Whether to log to WandB.
+            wandb_project (str): Weights and Biases project name.
+            wandb_run_name (str): Weights and Biases run name.
+            out_dir (str): Output directory.
+            log_dir (str): Log directory.
+            logger (Logger): Logging object.
+            global_step (int): Global step.
+            global_iter (int): Global iteration.
+            initial_iter (int): Initial iteration.
+            best_val_loss (float): Best validation loss.
+            curr_epoch (int): Current epoch.
+            total_epochs (int): Total number of epochs.
+            scaler: Scaler for gradient scaling.
+            device: Device for training.
+            ddp (bool): Use DistributedDataParallel for GPU training.
+            tpu_ddp (bool): Use TPU DistributedDataParallel for training.
+            pjrt_dist (bool): Use PJRT (PyTorch JIT-Ready Training) for TPU.
+            decay_lr (bool): whether to Apply learning rate decay.
+            eval_interval (int): Evaluation interval.
+            always_save_checkpoint (bool): Always save model checkpoints.
+            model_args (dict): Model configuration.
+            eval_only (bool): Enable evaluation mode only.
+            gradient_accumulation_steps (int): Number of gradient accumulation steps.
+            grad_clip (float): Gradient clipping value.
+            ctx: Context manager for auto mixed precision (amp) training.
+            log_interval (int): Log interval.
+            max_iters (int): Maximum iterations before stoppage.
+            mastr_proc (bool): Flag to indicate the master process.
+        """
             
         self.tbatch_genarator = train_loader
         self.vbatch_generator = val_loader
@@ -88,7 +124,14 @@ class Trainer:
     def validate_model(self, model, global_step, epoch):
         
         """
-        Estimate loss over train and val splits using many batches
+        Estimate loss over train and val splits using many batches.
+
+        Args:
+            model: Model to validate.
+            global_step (int): Global step.
+            epoch (int): Current epoch.
+        Returns:
+            out (dict): Validation loss dictionary.
         """
         
         # dict for saving the loss values
@@ -120,8 +163,13 @@ class Trainer:
     # learning rate decay scheduler (cosine with warmup)
     def get_lr(self, it):
         
-        """
-        Learning rate decay scheduler (cosine with warmup)
+       """
+        Learning rate decay scheduler (cosine with warmup).
+
+        Args:
+            it (int): Current iteration.
+        Returns:
+            lr (float): Learning rate for the current iteration.
         """
         
         # 1) linear warmup for warmup_iters steps
@@ -139,7 +187,12 @@ class Trainer:
     def save_eval_loss_curves(self, loss_data, global_step, epoch):
         
         """
-        Save loss curves for visualization
+        Save loss curves for visualization.
+
+        Args:
+            loss_data (dict): Loss data.
+            global_step (int): Global step.
+            epoch (int): Current epoch.
         """
 
         train_losses = loss_data['train']
@@ -173,7 +226,16 @@ class Trainer:
     def configure_optimizers(weight_decay, learning_rate, betas, device_type):
 
         """
-        Configure the optimizer based on provided parameters
+        Configure the optimizer based on provided parameters.
+
+        Args:
+            weight_decay (float): Weight decay.
+            learning_rate (float): Learning rate.
+            betas: Beta parameters for Adam optimizer.
+            device_type (str): Type of training device.
+
+        Returns:
+            optimizer: Optimizer for training.
         """
         
         # first of all filter out all non-trainable parameters
@@ -209,7 +271,17 @@ class Trainer:
     def save_checkpoint(self, out_dir, model, optimizer, scaler, global_iter, global_step, best_val_loss, epoch):
 
         """
-        Save model checkpoint
+        Save model checkpoint.
+
+        Args:
+            out_dir (str): Output directory.
+            model: Model to be saved.
+            optimizer: Optimizer.
+            scaler: Scaler for gradient scaling.
+            global_iter (int): Global iteration.
+            global_step (int): Global step.
+            best_val_loss (float): Best validation loss.
+            epoch (int): Current epoch.
         """
         
         checkpoint_dir = os.path.join(out_dir, f"E{epoch}_It{global_iter}_ckpt.pt")
