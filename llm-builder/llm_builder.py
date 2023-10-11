@@ -449,6 +449,10 @@ class LLMBuilder:
                 tpu_ddp = self.tpu_ddp,
                 pjrt_dist = self.pjrt_dist,
                 decay_lr=self.decay_lr,
+                warmup_iters = self.warmup_iters
+                lr_decay_iters = self.lr_decay_iters
+                min_lr = self.min_lr
+                learning_rate = self.learning_rate
                 eval_interval=self.eval_interval,
                 always_save_checkpoint=self.always_save_checkpoint,
                 model_args=self.model_args,
