@@ -104,6 +104,10 @@ class Trainer:
         self.tpu_ddp = tpu_ddp
         self.pjrt_dist = pjrt_dist
         self.decay_lr = decay_lr
+        self.warmup_iters = warmup_iters
+        self.learning_rate = learning_rate
+        self.lr_decay_iters = lr_decay_iters
+        self.min_lr = min_lr
         self.eval_interval = eval_interval
         self.always_save_checkpoint = always_save_checkpoint
         self.model_args = model_args
@@ -164,29 +168,40 @@ class Trainer:
         del model # free up memory
         return out
     
-    # learning rate decay scheduler (cosine with warmup)
-    def get_lr(self, it):
-        
-       """
-        Learning rate decay scheduler (cosine with warmup).
 
+    # learning rate decay scheduler (cosine with warmup)
+    def curr_lr(self, it, warmup_iters, lr_decay_iters, learning_rate, min_lr):
+        
+        """
+        Learning rate decay scheduler (cosine with warmup).
+    
         Args:
             it (int): Current iteration.
+            warmup_iters (int): Number of warm-up iterations.
+            lr_decay_iters (int): Number of iterations for learning rate decay.
+            learning_rate (float): Initial learning rate.
+            min_lr (float): Minimum learning rate.
+    
         Returns:
             lr (float): Learning rate for the current iteration.
         """
         
-        # 1) linear warmup for warmup_iters steps
+        # Linear warm-up for warmup_iters steps
         if it < warmup_iters:
-            return learning_rate * it / warmup_iters
-        # 2) if it > lr_decay_iters, return min learning rate
-        if it > lr_decay_iters:
-            return min_lr
-        # 3) in between, use cosine decay down to min learning rate
-        decay_ratio = (it - warmup_iters) / (lr_decay_iters - warmup_iters)
-        assert 0 <= decay_ratio <= 1
-        coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio)) # coeff ranges 0..1
-        return min_lr + coeff * (learning_rate - min_lr)
+            lr = learning_rate * it / warmup_iters
+            
+        # If it > lr_decay_iters, return min learning rate
+        elif it > lr_decay_iters:
+            lr = min_lr
+        
+        # In between, use cosine decay down to min learning rate
+        else:
+            decay_ratio = (it - warmup_iters) / (lr_decay_iters - warmup_iters)
+            decay_coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio))  # coeff ranges 0..1
+            lr = min_lr + decay_coeff * (learning_rate - min_lr)
+    
+        return lr
+
     
     def save_loss_curve(self, x, y, x_label, y_label, plt_title="X vs Y", plt_label="Plot", marker='o', linestyle='-', plot_name="plt"):
         
@@ -341,7 +356,7 @@ class Trainer:
                 break
 
             # Determine and set the learning rate for this iteration
-            lr = self.get_lr(global_step) if self.decay_lr else self.learning_rate
+            lr = self.curr_lr(global_step, self.warmup_iters, self.lr_decay_iters, self.learning_rate, self.min_lr) if self.decay_lr else self.learning_rate
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr
 
