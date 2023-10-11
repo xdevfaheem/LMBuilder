@@ -268,7 +268,7 @@ class Trainer:
         
         return optimizer
     
-    def save_checkpoint(self, out_dir, model, optimizer, scaler, global_iter, global_step, best_val_loss, epoch):
+    def save_checkpoint(self, out_dir, model, optimizer, global_iter, global_step, best_val_loss, epoch, scaler=None):
 
         """
         Save model checkpoint.
@@ -355,7 +355,7 @@ class Trainer:
                     if losses_dict['val'] < self.best_val_loss or self.always_save_checkpoint:
                         best_val_loss = losses_dict['val']
                         if global_iter > 0:
-                            self.save_checkpoint(self.out_dir, model, optimizer, scaler, global_iter, global_step, best_val_loss, epoch)
+                            self.save_checkpoint(self.out_dir, model, optimizer, global_iter, global_step, best_val_loss, epoch, scaler=scaler)
                     if self.eval_only and global_step == 0:
                         logger.info(f"Training Stopped at {global_step}")
                         break
