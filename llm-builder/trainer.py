@@ -25,6 +25,7 @@ class Trainer:
                  global_iter=0,
                  initial_iter=0,
                  best_val_loss=float(1000000.0),
+                 losses_list=None
                  curr_epoch=0,
                  total_epochs=3,
                  scaler=None,
@@ -61,6 +62,7 @@ class Trainer:
             global_iter (int): Global iteration.
             initial_iter (int): Initial iteration.
             best_val_loss (float): Best validation loss.
+            losses_list (list): list of training loss
             curr_epoch (int): Current epoch.
             total_epochs (int): Total number of epochs.
             scaler: Scaler for gradient scaling.
@@ -93,6 +95,7 @@ class Trainer:
         self.global_iter = global_iter
         self.initial_iter = initial_iter
         self.best_val_loss = best_val_loss
+        self.losses_list = losses_list
         self.curr_epoch = curr_epoch
         self.total_epochs = total_epochs
         self.scaler = scaler
@@ -121,7 +124,7 @@ class Trainer:
     
     # helps estimate an arbitrarily accurate loss over either split using many batches
     @torch.no_grad()
-    def validate_model(self, model, global_step, epoch):
+    def validate_model(self, model, global_step, epoch, plt_label="Loss", marker='o', linestyle='-'):
         
         """
         Estimate loss over train and val splits using many batches.
@@ -130,8 +133,11 @@ class Trainer:
             model: Model to validate.
             global_step (int): Global step.
             epoch (int): Current epoch.
+            plt_label (str, optional): Label for the plot curve. Defaults to "Loss".
+            marker (str, optional): Marker style for the data points. Defaults to 'o'.
+            linestyle (str, optional): Line style for the curve. Defaults to '-'.
         Returns:
-            out (dict): Validation loss dictionary.
+            out (dict): Validated loss dictionary.
         """
         
         # dict for saving the loss values
@@ -149,14 +155,12 @@ class Trainer:
                 with self.ctx:
                     _, loss = model(X, Y)
                 losses[k] = loss.item()
+            
             out[split] = losses
-        
-        # save loss curves to visualize later
-        self.save_eval_loss_curves(out, global_step, epoch)
-        
-        out["train"] = out["train"].mean()
-        out["val"] = out["val"].mean()
-        
+            # save loss curves to visualize later
+            self.save_loss_curve(range(1, self.eval_iters+1), losses, x_label="Evaluation Iterations", y_label=f"{split.capitalize()} Loss", plt_title=f"Evaluation Iterations vs {split.capitalize()} Loss", plt_label=plt_label, marker=marker, linestyle=linestyle, plot_name=f"E{epoch}_It{global_step}_S{split}_loss_curve")
+            out[split] = out[split].mean()
+            
         del model # free up memory
         return out
     
@@ -184,44 +188,36 @@ class Trainer:
         coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio)) # coeff ranges 0..1
         return min_lr + coeff * (learning_rate - min_lr)
     
-    def save_eval_loss_curves(self, loss_data, global_step, epoch):
+    def save_loss_curve(self, x, y, x_label, y_label, plt_title="X vs Y", plt_label="Plot", marker='o', linestyle='-', plot_name="plt"):
         
-        """
-        Save loss curves for visualization.
+    """
+    Save a loss curve as a plot.
 
-        Args:
-            loss_data (dict): Loss data.
-            global_step (int): Global step.
-            epoch (int): Current epoch.
-        """
+    Args:
+        x (list or array-like): x-axis data.
+        y (list or array-like): y-axis data.
+        x_label (str): Label for the x-axis.
+        y_label (str): Label for the y-axis.
+        plt_title (str, optional): Title for the plot. Defaults to "X vs Y".
+        plt_label (str, optional): Label for the plot curve. Defaults to "Plot".
+        marker (str, optional): Marker style for the data points. Defaults to 'o'.
+        linestyle (str, optional): Line style for the curve. Defaults to '-'.
+        plot_name (str, optional): Name for the saved plot file. Defaults to "plt".
+    """
 
-        train_losses = loss_data['train']
-        val_losses = loss_data['val']
+    # Create a plot for the loss curve
+    plt.figure(figsize=(10, 5))
+    plt.plot(x, y, label=plt_label, marker=marker, linestyle=linestyle)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.title(plt_title)
+    plt.legend()
+    plt.grid(True)
+    
+    # Save the plot as an image file
+    plt.savefig(os.path.join(self.plot_dir, f'{plot_name}.png'))
 
-        eval_iters = range(1, len(train_losses) + 1)  # Assuming len(train_losses) == len(val_losses)
-
-        # Plot training loss
-        plt.figure(figsize=(10, 5))
-        plt.plot(eval_iters, train_losses, label='Train Loss', marker='o', linestyle='-')
-        plt.xlabel('Evaluation Iterations')
-        plt.ylabel('Train Loss')
-        plt.title('Evaluation Iterations vs Training Loss')
-        plt.legend()
-        plt.grid(True)
-        plt.savefig(os.path.join(self.plot_dir, f'E{epoch}_{global_step}_train_loss_curve.png'))
-        #plt.show()
-
-        # Plot evaluation loss
-        plt.figure(figsize=(10, 5))
-        plt.plot(eval_iters, val_losses, label='Validation Loss', marker='o', linestyle='-')
-        plt.xlabel('Evaluation Iterations')
-        plt.ylabel('Validation Loss')
-        plt.title('Evaluation Iterations vs Validation Loss')
-        plt.legend()
-        plt.grid(True)
-        plt.savefig(os.path.join(self.plot_dir, f'E{epoch}_{global_step}_val_loss_curve.png'))
-        #plt.show()
-
+        
     @staticmethod
     def configure_optimizers(weight_decay, learning_rate, betas, device_type):
 
@@ -268,7 +264,7 @@ class Trainer:
         
         return optimizer
     
-    def save_checkpoint(self, out_dir, model, optimizer, global_iter, global_step, best_val_loss, epoch, scaler=None):
+    def save_checkpoint(self, out_dir, model, optimizer, global_iter, global_step, best_val_loss, losses_list, epoch, scaler=None):
 
         """
         Save model checkpoint.
@@ -293,6 +289,7 @@ class Trainer:
                     'global_step': global_step,
                     'global_iter': global_iter,
                     'best_val_loss': best_val_loss,
+                    'loss' : losses_list,
                     'epoch': epoch,
                     'config': self.config,
         }
@@ -301,142 +298,142 @@ class Trainer:
     
     def train(self, model, optimizer):
 
-        """
-        Train the model
-        """
-        
-        # changing the scope of some frequently used variable into local
-        scaler = self.scaler # grad scaler
-        initial_iter=self.initial_iter
-        global_iter=self.global_iter # total number of iteration
-        max_iters=self.max_iters # maximum number of iterations
-        global_step=self.global_step # total model grad adjustment made so far
-        local_iter=0 # curent iteration number
-        
-        t0 = time.perf_counter()
-        
-        # initialising CombinedDatasetIterator ( check `__iter__` method in CombinedDataset)
-        train_loader = iter(self.tbatch_genarator)
-        model.train() # change the model to training mode
-        
-        for epoch in epochs:
-            
-            if epoch != 0 and global_iter > 0:
-                self.logger.info(f"Resuming training from epoch: {epoch} and iteration: {global_iter}")
-            
-            elif epoch == 0 and global_iter == 0:
-                self.logger.info(f"Training Started!")
-                self.logger.info(f"{'-'*25} Epoch:{epoch} {'-'*25}")
-            
-            for X, Y in train_loader:
-            
-                # termination conditions
-                if self.max_iters is not None and global_step >= self.max_iters:
-                    self.logger.info("Training Completed!")
+    """
+    Train the model and log training progress.
+
+    Args:
+        model (torch.nn.Module): The neural network model to train.
+        optimizer (torch.optim.Optimizer): The optimizer used for training.
+    """
+
+    # Extract frequently used variables and initialize variables
+    scaler = self.scaler  # Grad scaler
+    initial_iter = self.initial_iter
+    global_iter = self.global_iter  # Total number of iterations
+    max_iters = self.max_iters  # Maximum number of iterations
+    global_step = self.global_step  # Total model gradient adjustments made so far
+    local_iter = 0  # Current iteration number
+
+    # Initialize a list to store training losses
+    train_losses = self.losses_list if self.losses_list is not None else []
+
+    # Initialize the training data loader and set the model to training mode
+    train_loader = iter(self.tbatch_genarator)
+    model.train()
+
+    t0 = time.perf_counter()
+
+    # Iterate through epochs
+    for epoch in epochs:
+
+        # Logging for resuming training or starting anew
+        if epoch != 0 and global_iter > 0:
+            self.logger.info(f"Resuming training from epoch: {epoch} and iteration: {global_iter}")
+        elif epoch == 0 and global_iter == 0:
+            self.logger.info(f"Training Started!")
+            self.logger.info(f"{'-'*25} Epoch:{epoch} {'-'*25}")
+
+        for X, Y in train_loader:
+
+            # Termination conditions
+            if self.max_iters is not None and global_step >= self.max_iters:
+                self.logger.info("Training Completed!")
+                break
+
+            # Determine and set the learning rate for this iteration
+            lr = self.get_lr(global_step) if self.decay_lr else self.learning_rate
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = lr
+
+            # Evaluate the loss on train/val sets and write checkpoints
+            if global_iter % self.eval_interval == 0 and self.mastr_proc:
+                losses_dict = self.validate_model(model, global_iter, epoch)
+                self.logger.info(f"Epoch: {epoch} Total Iters: {global_iter} Total Steps: {global_step} Train loss: {losses_dict['train']:.4f} Val loss: {losses_dict['val']:.4f}")
+                if self.wandb_log:
+                    wandb.log({
+                        "iters": global_iter,
+                        "step": global_step,
+                        "train_loss": losses_dict['train'],
+                        "val_loss": losses_dict['val'],
+                        "lr": lr,
+                    })
+                if losses_dict['val'] < self.best_val_loss or self.always_save_checkpoint:
+                    best_val_loss = losses_dict['val']
+                    if global_iter > 0:
+                        # Save a checkpoint with loss data
+                        self.save_checkpoint(self.out_dir, model, optimizer, global_iter, global_step, best_val_loss, train_losses, epoch, scaler=scaler)
+                if self.eval_only and global_step == 0:
+                    logger.info(f"Training Stopped at {global_step}")
                     break
 
-                # determine and set the learning rate for this iteration
-                lr = self.get_lr(global_step) if self.decay_lr else self.learning_rate
-                for param_group in optimizer.param_groups:
-                    param_group['lr'] = lr
+            # Forward backward update, with gradient accumulation to simulate larger batch size
+            # Check if the gradients are accumulating or accumulated
+            iter_t0 = time.perf_counter()
+            is_accumulating = ((global_step + 1) % self.gradient_accumulation_steps != 0)  # +1 to prevent scale and backprop at gstep 0
 
-                # evaluate the loss on train/val sets and write checkpoints
-                if global_iter % self.eval_interval == 0 and self.mastr_proc:
-                    losses_dict = self.validate_model(model, global_iter, epoch)
-                    self.logger.info(f"Epoch: {epoch} Total Iters: {global_iter} Total Steps: {global_step} Train loss: {losses_dict['train']:.4f} Val loss: {losses_dict['val']:.4f}")
-                    if self.wandb_log:
-                        wandb.log({
-                            "iters": global_iter,
-                            "step": global_step,
-                            "train_loss": losses_dict['train'],
-                            "val_loss": losses_dict['val'],
-                            "lr": lr,
-                        })
-                    if losses_dict['val'] < self.best_val_loss or self.always_save_checkpoint:
-                        best_val_loss = losses_dict['val']
-                        if global_iter > 0:
-                            self.save_checkpoint(self.out_dir, model, optimizer, global_iter, global_step, best_val_loss, epoch, scaler=scaler)
-                    if self.eval_only and global_step == 0:
-                        logger.info(f"Training Stopped at {global_step}")
-                        break
+            if is_accumulating:
 
-                # forward backward update, with gradient accumulation to simulate larger batch size
-                # check if the gradients are accumulating or accumulated
-                iter_t0 = time.perf_counter()
-                is_accumulating = ((global_step+1) % self.gradient_accumulation_steps != 0 # +1 to prevent scale and backprop at gstep 0
-                
-                if is_accumulating:
-                    
-                    # This bloats the code with repeated code. should be fixed by looking into this (https://pytorch.org/docs/master/_modules/torch/nn/parallel/distributed.html#DistributedDataParallel.no_sync) in the future insha allah
-                    if self.ddp:
-                        #https://github.com/pytorch/pytorch/issues/43201#issue-680863643
-                        with torch.nn.parallel.DistributedDataParallel.no_sync()
-                            with self.ctx:
-                                logits, loss = model(X, Y)
-                                loss = loss / self.gradient_accumulation_steps # scale the loss to account for gradient accumulation
-                            if scaler: # for GPU
-                                # backward pass, with gradient scaling if training in fp16
-                                scaler.scale(loss).backward()
-                            else: # for TPU and CPU
-                                loss.backward()
-                    else:
+                # This bloats the code with repeated code. Should be fixed by looking into this (https://pytorch.org/docs/master/_modules/torch/nn/parallel/distributed.html#DistributedDataParallel.no_sync) in the future.
+                if self.ddp:
+                    with torch.nn.parallel.DistributedDataParallel.no_sync():
                         with self.ctx:
-                                logits, loss = model(X, Y)
-                                loss = loss / self.gradient_accumulation_steps # scale the loss to account for gradient accumulation
-                            if scaler: # for GPU
-                                # backward pass, with gradient scaling if training in fp16
-                                scaler.scale(loss).backward()
-                            else: # for TPU and CPU
-                                loss.backward()
-                
-                if not is_accumulating:                   
-                    
-                    # clip the gradient
-                    if self.grad_clip != 0.0:
-                        # step the optimizer and scaler 
-                        if scaler:
-                            scaler.unscale_(optimizer)
-                        torch.nn.utils.clip_grad_norm_(model.parameters(), self.grad_clip)
-                    
-                    # optimizer step
+                            logits, loss = model(X, Y)
+                            loss = loss / self.gradient_accumulation_steps  # Scale the loss to account for gradient accumulation
+                        if scaler:  # For GPU
+                            # Backward pass, with gradient scaling if training in FP16
+                            scaler.scale(loss).backward()
+                        else:  # For TPU and CPU
+                            loss.backward()
+                else:
+                    with self.ctx:
+                        logits, loss = model(X, Y)
+                        loss = loss / self.gradient_accumulation_steps  # Scale the loss to account for gradient accumulation
+                    if scaler:  # For GPU
+                        # Backward pass, with gradient scaling if training in FP16
+                        scaler.scale(loss).backward()
+                    else:  # For TPU and CPU
+                        loss.backward()
 
-                    # for gpu with grad scaler
-                    if self.device_type == "gpu" and scaler is not None: # for single gpu or multi gpus devices within ddp container
-                        # take optimizer step and update the scaling factor if training in fp16
-                        scaler.step(optimizer)
-                        scaler.update()
+            if not is_accumulating:
 
-                    # for single tpu host with pjrt
-                    elif self.device_type == "tpu" and self.pjrt_dist:
-                        xm.optimizer_step()
+                # Clip the gradient
+                if self.grad_clip != 0.0:
+                    # Step the optimizer and scaler
+                    if scaler:
+                        scaler.unscale_(optimizer)
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), self.grad_clip)
 
-                    # for single tpu core
-                    elif self.device_type == "tpu" and (not self.tpu_ddp and not self.pjrt_dist):
-                        xm.optimizer_step(optimizer, barrier=True)
-                        
+                # Perform optimizer step based on device type
+                if self.device_type == "gpu" and scaler is not None:  # For single GPU or multi-GPUs devices within DDP container
+                    # Take optimizer step and update the scaling factor if training in FP16
+                    scaler.step(optimizer)
+                    scaler.update()
+                elif self.device_type == "tpu" and self.pjrt_dist:  # For a single TPU host with pjrt
+                    xm.optimizer_step()
+                elif self.device_type == "tpu" and (not self.tpu_ddp and not self.pjrt_dist):  # For a single TPU core
+                    xm.optimizer_step(optimizer, barrier=True)
+                elif (self.device_type == "tpu" and self.tpu_ddp) or self.device_type == "cpu":  # For CPU device or single TPU with multi-core or multi-TPU devices with multicore wrapped within DDP container
+                    optimizer.step()
 
-                    # for cpu device or single tpu with multi core or multi tpu devices with multicore wrapped within ddp container
-                    elif (self.device_type == "tpu" and self.tpu_ddp) or self.device_type == "cpu":
-                        optimizer.step()
-                    
-                    # flush the gradients as soon as we can, no need for this memory anymore
-                    optimizer.zero_grad(set_to_none=True)
-                    global_step += 1 # update (no. of model parameters adjustment) steps
+                # Flush the gradients as soon as we can, no need for this memory anymore
+                optimizer.zero_grad(set_to_none=True)
+                global_step += 1  # Update (number of model parameter adjustments) steps
 
-                # update local and global iteration nums
-                global_iter += 1
-                local_iter += 1
-            
-                # timing and logging
-                t1 = time.perf_counter()
-                iter_time = t1 - iter_t0
+            # Update local and global iteration numbers
+            global_iter += 1
+            local_iter += 1
 
-                if global_iter % self.log_interval == 0:
-                    # get loss as float. note: this is a CPU-GPU sync point
-                    # scale up to undo the division above, approximating the true total loss (exact would have been a sum)
-                    lossf = loss.item() * self.gradient_accumulation_steps
-                    if local_iter >= 6: # let training settle a bit!
-                        self.logger.info(f"Current Iteration: {local_iter}, Overall Iteration: {global_iter}, Total Steps: {global_step}, Loss: {lossf}, Time: {(iter_time*1000):.2f}ms, Estimated Remaining Hours: {(((t1 - total_t0) / (global_iter - initial_iter)) * (max_iters - global_iter) / 3600):.2f} hours, Estimated Remaining Days: {(((t1 - total_t0) / (global_iter - initial_iter)) * (max_iters - global_iter) / 3600 / 24):.2f} days")
-                
-            
-        return train_losses
+            # Timing and logging
+            t1 = time.perf_counter()
+            iter_time = t1 - iter_t0
+
+            if global_iter % self.log_interval == 0:
+                # Get loss as a float. Note: this is a CPU-GPU sync point.
+                # Scale up to undo the division above, approximating the true total loss (exact would have been a sum)
+                lossf = loss.item() * self.gradient_accumulation_steps
+                train_losses.append(lossf)
+                if local_iter >= 6:  # Let training settle a bit!
+                    self.logger.info(f"Current Iteration: {local_iter}, Overall Iteration: {global_iter}, Total Steps: {global_step}, Loss: {lossf}, Time: {(iter_time * 1000):.2f}ms, Estimated Remaining Hours: {(((t1 - total_t0) / (global_iter - initial_iter)) * (max_iters - global_iter) / 3600):.2f} hours, Estimated Remaining Days: {(((t1 - total_t0) / (global_iter - initial_iter)) * (max_iters - global_iter) / 3600 / 24):.2f} days")
+
+        # Save the training loss curve for the epoch
+        self.save_loss_curve(range(1, len(train_losses) + 1), train_losses, x_label=f"Epoch{epoch}", y_label="Training loss", plt_title="One Epoch vs Training Loss", plt_label="Training loss curve", marker='o', linestyle='-', plot_name=f"epoch{epoch}_train_loss")
