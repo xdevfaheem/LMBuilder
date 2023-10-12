@@ -38,6 +38,54 @@ from model import GPTConfig, GPT
 class LLMBuilderConfig:
     
     def __init__(self, dataset_config: dict, **kwargs):
+
+        """
+        Configuration Class's Constructor for the Language Model (LLM) builder. Contains various settings and hyperparameters for the model.
+
+        Args:
+            dataset_config (dict): Configuration for the dataset.
+            **kwargs: Additional keyword arguments for configuration.
+
+        Attributes:
+            - dataset_config (dict): A dictionary containing list of tuple which contains prefixes of the memap files and distribution weights for each splits
+                - Example: {'train': [("tinystories", 1.0)], 'validation': [("tinystories", 1.0)]}
+            - out_dir (str): The directory where model checkpoints and logs will be saved.
+            - data_dir (str): The directory containing data and dataset files.
+            - model_name (str): The name of the LLM.
+            - data_prep_config (dict): Configuration for data preparation.
+            - model_configs (dict): Configuration for the LLM's architecture.
+            - pl_kwargs (dict): Configuration for parallel loader used for distributed training over tpu core.
+            - eval_interval (int): Interval at which evaluation is performed during training.
+            - total_epochs (int): Total number of training epochs.
+            - log_interval (int): Interval for logging training progress.
+            - eval_iters (int): Number of iterations for evaluation.
+            - eval_only (bool): Flag indicating if the model is for evaluation only if resuming from checkpoint
+            - always_save_checkpoint (bool): Flag indicating whether to save checkpoints on eval_intervals
+            - init_from (str): Initialization source for the model (e.g., 'scratch' or 'resume').
+            - wandb_log (bool): Flag for logging to WandB.
+            - wandb_project (str): Weights and Biases project name.
+            - wandb_run_name (str): Name for the Weights and Biases run.
+            - batch_size_per_device (int): Batch size per device used in training.
+            - block_size (int): The size of data blocks.
+            - tpu_ddp (bool): Flag indicating TPU Distributed Data Parallel (TPU DDP) usage.
+            - pjrt_dist (bool): Flag for using PJRT when using Distributed Data Parallel (DDP) on TPU.
+            - gradient_accumulation_steps (int): Number of gradient accumulation steps.
+            - learning_rate (float): Learning rate for training.
+            - max_iters (int): Maximum number of training iterations.
+            - weight_decay (float): Weight decay for optimization.
+            - beta1 (float): Beta1 parameter for optimization.
+            - beta2 (float): Beta2 parameter for optimization.
+            - grad_clip_value (float): Gradient clipping value.
+            - decay_lr (bool): Flag for learning rate decay.
+            - warmup_iters (int): Number of warm-up iterations for learning rate scheduling.
+            - lr_decay_iters (int): Number of iterations for learning rate decay.
+            - min_lr (float): Minimum learning rate.
+            - backend (str): Backend for DDP training (e.g., 'nccl').
+            - device_type (str): Type of device for training (e.g., 'cpu', 'gpu', 'tpu').
+            - seed (int): Random seed for reproducibility.
+            - is_compile (bool): Flag indicating whether to compile the model before training or resuming.
+            - prepare_dataset (bool): Flag for dataset preparation if not prepared already.
+        """
         
         self.dataset_config = dataset_config
         for key, value in kwargs.items():
@@ -101,7 +149,6 @@ class LLMBuilderConfig:
     tpu_ddp=False
     pjrt_dist=True # Required for DDP on TPU v2/v3 when using PJRT.
     gradient_accumulation_steps=40
-    num_samples = int(1e10)
     learning_rate = 6e-4
     max_iters = 600000
     weight_decay = 1e-1
@@ -128,6 +175,56 @@ class LLMBuilder:
     
     
     def __init__(self, builder_config):
+
+        """
+        Main class responsible for building and training the Language Model. Initializes and configures the model, data loading, and training process.
+
+        Args:
+            builder_config: An instance of LLMBuilderConfig containing model and training configuration settings
+
+        Attributes:
+            - out_dir (Path): The directory where model checkpoints and logs will be saved.
+            - model_name (str): The name of the LLM.
+            - data_dir (str): The directory containing data and dataset files.
+            - dataset_dir (str): The directory containing the dataset files.
+            - model_args (dict): Configuration settings for the LLM's architecture.
+            - paraloader_kwargs (dict): Configuration for parallel loader used for distributed training over tpu core or multi-tpu host 
+            - eval_interval (int): Interval at which evaluation is performed during training.
+            - num_epochs (int): Total number of training epochs.
+            - log_interval (int): Interval for logging training progress.
+            - eval_iters (int): Number of iterations for evaluation.
+            - eval_only (bool): Flag indicating if the model is for evaluation only.
+            - always_save_checkpoint (bool): Flag indicating whether to save checkpoints after each epoch.
+            - init_from (str): Initialization source for the model (e.g., 'scratch' or 'resume').
+            - wandb_log (bool): Flag for logging to Weights and Biases.
+            - wandb_project (str): Weights and Biases project name.
+            - wandb_run_name (str): Name for the Weights and Biases run.
+            - tpu_ddp (bool): Flag indicating TPU Distributed Data Parallel (TPU DDP) usage.
+            - pjrt_dist (bool): Flag for using PJRT when using Distributed Data Parallel (DDP) on TPU.
+            - batch_size_per_device (int): Batch size per device used in training.
+            - gradient_accumulation_steps (int): Number of gradient accumulation steps.
+            - seed (int): Random seed for reproducibility.
+            - block_size (int): The size of data blocks.
+            - learning_rate (float): Learning rate for training.
+            - max_iters (int): Maximum number of training iterations.
+            - weight_decay (float): Weight decay for optimization.
+            - beta1 (float): Beta1 parameter for optimization.
+            - beta2 (float): Beta2 parameter for optimization.
+            - grad_clip_value (float): Gradient clipping value.
+            - decay_lr (bool): Flag for learning rate decay.
+            - warmup_iters (int): Number of warm-up iterations for learning rate scheduling.
+            - lr_decay_iters (int): Number of iterations for learning rate decay.
+            - min_lr (float): Minimum learning rate.
+            - backend (str): Backend for DDP (e.g., 'nccl').
+            - device_type (str): Type of device for training (e.g., 'cpu', 'gpu', 'tpu').
+            - compile (bool): Flag indicating whether to compile the model before training.
+            - dataset_preparation_config (dict): Configuration for data preprocessing.
+            - prepare_dataset (bool): Flag for dataset preparation if not already
+            - train_data_config (list): Configuration for the training dataset memap files
+            - val_data_config (list): Configuration for the validation dataset memap files
+            - logger: Logger for capturing and displaying log messages.
+
+        """
         
 # -------------------------------------configurations----------------------------------------------
 
@@ -172,7 +269,29 @@ class LLMBuilder:
         self.val_data_config = builder_config.dataset_config["validation"]
         self.setup()
         
-    def setup(self):
+    def setup(self): 
+
+        """
+        Initialize and configure the LLMBuilder for training, involving intricate steps initializing model, data loaders, and other essential components.
+
+        This method is responsible for configuring various aspects of the LLMBuilder, including the model, data loaders,
+        optimizer, gradient scaler, and other training-related components. It also handles the initialization of the
+        Trainer class, which orchestrates the training process. The method performs the following key tasks:
+
+        - Configures logging for tracking the setup and training process.
+        - Determines the device (CPU, GPU, TPU) to be used for training and sets the appropriate data type (dtype).
+        - Prepares the dataset, including creating data loaders for training and validation data.
+        - Sets up the tokenizer based on the vocabulary size and type.
+        - Initializes the model, either from scratch or by resuming training from a checkpoint.
+        - Handles Wraping the model in a DistributedDataParallel (DDP) container for multi-GPU training, if applicable.
+        - Initializes the gradient scaler for mixed-precision training.
+        - Sets up the optimizer for training.
+        - Initializes the Trainer class for managing the training process.
+        
+        Note that this method also handles various device-specific configurations for CPU, GPU, and TPU training.
+
+        """
+
         
         self.logger = self._configure_logging(log_dir, "setup")
         train_logger = self._configure_logging(log_dir, "training")
@@ -466,6 +585,18 @@ class LLMBuilder:
             )
             
     def _configure_logging(self, log_dir, file_name):
+
+        """
+        Configure the logging mechanism for the LLMBuilder.
+
+        Args:
+            log_dir (str): The directory where log files will be stored.
+            file_name (str): The name of the log file.
+
+        Returns:
+            logger (Logger): A configured logger object for logging messages.
+        """
+        
         # Create a logger
         logger = logging.getLogger(__name__)
         logger.setLevel(logging.DEBUG)  # Set the lowest log level (DEBUG)
@@ -504,6 +635,25 @@ class LLMBuilder:
         seed: int = 12345,
         split="train",
     ) -> DataLoader:
+
+        """
+         Creating dataloader for either training or validation.
+
+        Args:
+            batch_size (int): Batch size for the data loader.
+            block_size (int): The size of data blocks.
+            num_chunks (int): Number of chunks to control the buffer size.
+            dataset_dir (Path): Path to the dataset directory.
+            n_process (int): Number of processes for parallel loading.
+            proc_rank (int): Rank of the process.
+            device (torch.device): Host device
+            shuffle (bool): Flag for shuffling the dataset.
+            seed (int): Random seed for reproducibility.
+            split (str): Split of the dataset (e.g., 'train' or 'val').
+
+        Returns:
+            DataLoader: A data loader for training or validation data.
+        """
 
         datasets = []
         wts = []
@@ -566,6 +716,23 @@ class LLMBuilder:
                 val_data_dir: Optional[Path] = None,
                 seed: int = 12345,
                 ) -> Tuple[DataLoader, DataLoader]:
+
+        """
+        function Create data loaders for both training and validation.
+
+        Args:
+            batch_size (int): Batch size for the data loaders.
+            block_size (int): The size of data blocks.
+            train_data_dir (Path): Path to the training dataset directory.
+            num_process (int): Number of processes for parallel loading.
+            process_rank (int): Rank of the process.
+            device (torch.device): Device for data loading.
+            val_data_dir (Path, optional): Path to the validation dataset directory.
+            seed (int): Random seed for reproducibility.
+
+        Returns:
+            Tuple[DataLoader, DataLoader]: Data loaders for training and validation.
+        """
         
         # Increase by one because we need the next token as well
         effective_block_size = block_size + 1
@@ -598,5 +765,8 @@ class LLMBuilder:
         return train_dataloader, val_dataloader
         
     def build(self):
+        """
+        Start training the LLM
+        """
         self.logger.info("Firing up the training...")
         tloss = self.trainer.train(self.model, self.optimizer)
