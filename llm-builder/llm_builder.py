@@ -765,8 +765,21 @@ class LLMBuilder:
         return train_dataloader, val_dataloader
         
     def build(self):
+
         """
         Start training the LLM
         """
-        self.logger.info("Firing up the training...")
-        tloss = self.trainer.train(self.model, self.optimizer)
+
+        def _xmp_spawn_fn(index, model, optimizer):
+            torch.set_default_tensor_type('torch.FloatTensor')
+            self.setup()
+            self.logger.info("Firing up the training on xla device!")
+            self.trainer.train(self.model, self.optimizer)
+
+        if self.device_type == "tpu" and (self.pjrt_dist or self.tpu_ddp):
+            xmp.spawn(_xmp_spawn_fn, args=(self.model, self.optimizer), nprocs= xm.xrt_world_size())
+        
+        else:
+            self.setup()
+            self.logger.info("Firing up the training on xla device!")
+            self.trainer.train(self.model, self.optimizer)
