@@ -1,8 +1,8 @@
 <h1 align="center">LLM Builder<h1/>
 
-![Project Logo or Banner (if available)](link-to-your-image)
-
-<h2 align="center">Facilitate the Construction of Robust Large Language Models<h2/>
+<p align="center">
+      <h2 align="center">Facilitate the Construction of Robust Large Language Models<h2/>
+<p/>
 
 ## Table of Contents
 
