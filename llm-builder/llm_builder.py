@@ -771,6 +771,7 @@ class LLMBuilder:
         """
 
         def _xmp_spawn_fn(index, model, optimizer):
+            os.environ["XLA_USE_BF16"] = True
             torch.set_default_tensor_type('torch.FloatTensor')
             self.setup()
             self.logger.info("Firing up the training on xla device!")
