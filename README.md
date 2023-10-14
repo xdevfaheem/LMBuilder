@@ -1,8 +1,9 @@
-<h1 align="center">LLM Builder<h1/>
-
-<p align="center">
-      <h2 align="center">Facilitate the Construction of Robust Large Language Models<h2/>
-<p/>
+<h1 align="center"> 
+      🛠️LLM Builder 
+      <h1/>
+      <p align="center">
+            <p align="center"> Facilitate the Construction of Robust Large Language Models <p/>
+      <p/>
 
 ## Table of Contents
 
