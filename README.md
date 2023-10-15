@@ -1,6 +1,6 @@
 <h1 align="center"> 🛠️LLM Builder <h1/>
 <p>
-    <p align="center"> Facilitate the Construction of Robust Large Language Models <p/>
+    <p align="center"> Facilitate the Seamless Construction of Robust Large Language Models <p/>
 <p/>
 
 ## Table of Contents
@@ -20,7 +20,12 @@
 
 ## Introduction
 
-Welcome to LLM Builder, your one-stop solution for easily constructing robust Large Language Models (LLMs) from scratch. This repository simplifies the entire process, from preparing datasets and customizing architecture to multi-device training and optimization.
+LLM Builder is an open-source deep learning training library specifically for building Large Language Models (LLMs) by [Faheem](https://github.com/TheFaheem). where the intricacies of crafting formidable Large Language Models (LLMs) are masterfully tamed, rendering the formidable accessible. Our repository empowers users, from fledgling enthusiasts to seasoned researchers, to embark on a journey of LLM construction without the burden of extensive code wrangling.
+
+At its core, LLM Builder stands as an all-encompassing solution, artfully handling every facet of the LLM creation process. With a customizable architecture as your canvas, this platform eases the labyrinthine path of dataset preparation, paving the way for a smoother transition to the training optimization phase. It meticulously logs your progress, ensuring that no insights are lost in the labyrinth of machine learning. 
+
+Liberated from hardware constraints, LLM Builder extends its embrace to the entire spectrum of training environments, encompassing single GPUs, TPU hosts, TPU cores, and the orchestration of multi-GPU and TPU devices.
+
 
 [Include a brief introduction to your project, its goals, and why it's valuable.]
 
