@@ -15,8 +15,6 @@
 - [License](#license)
 - [Documentation](#documentation)
 - [Support](#support)
-- [FAQ](#faq)
-- [Acknowledgments](#acknowledgments)
 
 ## Introduction
 
@@ -52,7 +50,7 @@ llm_builder.build()
 
 ### Configuration
 
-Configuring LLM Builder to meet your specific needs is made easy with the `LLMBuilderConfig` class. Below, we explain how to fine-tune the settings for your language model construction:
+Configuring LLM Builder to meet your specific needs is made easy with the `LLMBuilderConfig` class. Below, we explain some configuration settings to build your LLM:
 
 **Language Model Configuration**
 
@@ -78,7 +76,7 @@ Configuring LLM Builder to meet your specific needs is made easy with the `LLMBu
   
 With LLM Builder's comprehensive configuration options, you can create and train your Large Language Models with precision and flexibility.
 
-For more detailed information about each configuration attributes, please refer to the [`LLMBuilderConfig class`](https://github.com/TheFaheem/llm-builder/blob/main/llm-builder/llm_builder.py#L38) docstring.
+For more detailed information about each configuration attributes, please refer to the [`LLMBuilderConfig class`](https://github.com/TheFaheem/llm-builder/blob/main/llm-builder/llm_builder.py#L38) docstring (as for now).
 
 
 ## Contributing
@@ -97,4 +95,6 @@ Contribution Needed!
 
 If you have questions or run into issues, please visit our [Issue Tracker]([link-to-issues](https://github.com/TheFaheem/llm-builder/issues)) for support and bug reporting.
 
+
+**LLLm-Builder © 2023 by Faheem is licensed under CC BY-NC-SA 4.0** 
 
