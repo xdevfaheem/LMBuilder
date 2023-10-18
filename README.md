@@ -26,7 +26,7 @@ Liberated from hardware constraints, LLM Builder extends its embrace to the enti
 
 ## Features
 
-Check out [FEATURES.md](https://github.com/TheFaheem/llm-builder/blob/main/FEATURES.md) for detailed and elaborate features of this repo.
+Check out [FEATURES](https://github.com/TheFaheem/llm-builder/blob/main/FEATURES.md) file for detailed features of this project.
 
 ## Getting Started
 
