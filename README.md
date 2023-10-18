@@ -26,7 +26,7 @@ Liberated from hardware constraints, LLM Builder extends its embrace to the enti
 
 ## Features
 
-Check out [FEATURES.md](https://github.com/TheFaheem/llm-builder/blob/main/FEATURES.md) for more detailed and elaborate features of this repo.
+Check out [FEATURES.md](https://github.com/TheFaheem/llm-builder/blob/main/FEATURES.md) for detailed and elaborate features of this repo.
 
 ## Getting Started
 
@@ -101,8 +101,6 @@ Contribution Needed!
 
 ## Support
 
-If you have questions or run into issues, please visit our [Issue Tracker]([link-to-issues](https://github.com/TheFaheem/llm-builder/issues)) for support and bug reporting.
+If you have questions or run into issues, please visit our [Issue Tracker](https://github.com/TheFaheem/llm-builder/issues) for support and bug reporting.
 
-
-**LLLm-Builder © 2023 by Faheem is licensed under CC BY-NC-SA 4.0** 
 
