@@ -56,21 +56,21 @@ llm_builder.build()
 
 ## Configuration
 
-Configuring LLM Builder to suit your specific needs is straightforward with the `LLMBuilderConfig` class. Here, we outline some of the key configuration settings for building your Large Language Model (LLM):
+Configuring LLM Builder to suit your specific needs is straightforward with the `LLMBuilderConfig` class. which provides settings and hyperparameters for your Large Language Model (LLM). This section highlights key attributes and settings for configuring your LLM.
 
 ### Language Model Configuration Attributes
 
-- **Customizable Architecture:** LLM Builder provides the flexibility to design a language model architecture tailored to your research objectives. You can experiment with various model configurations, including the number of layers, attention mechanisms, and embedding layers.
-
-- **Effortless Dataset Preparation:** Streamline the data preparation process with `dataset_preparation_config`. This allows you to control dataset file paths, vocabulary size, and special tokens (e.g., eos, bos, pad, unk) to ensure data compatibility with the model.
+- **Customizable Architecture:** LLM Builder empowers you to design a language model architecture that aligns with your specific research goals. You can experiment with various model configurations, including the number of layers, attention mechanisms, and embedding layers.
+  
+- **Effortless Dataset Preparation:** Streamline the data preparation process by configuring dataset preparation settings. This allow you to control dataset file paths, vocabulary size, and special tokens (e.g., eos, bos, pad, unk) to ensure data compatibility with your model.
 
 - **Versatile Training Optimization:** Fine-tune your model's performance by adjusting hyperparameters such as learning rate, weight decay, gradient clipping, and more.
 
-- **Distributed Training:** Choose the hardware environment for training, whether it's a single CPU, GPU, TPU host, TPU core, or a multi-GPU setup. You can efficiently scale training across multiple devices, maximizing available resources.
+- **Distributed Training:** LLM Builder offers flexibility in specifying the hardware environment for training. Whether you choose a single CPU, GPU, TPU host, TPU core, or a multi GPU, TPU setup, You can efficiently scale training across multiple devices, maximizing available resources.
 
-- **Checkpointing and Resuming:** Take advantage of checkpointing to save and resume training from the last checkpoint. This feature preserves your training progress, even in cases of interruptions or system failures.
+- **Checkpointing and Resuming:** Take advantage of built-in checkpointing to save and resume your training from the last checkpoint, ensuring your progress is preserved even in the face of interruptions or system failures.
 
-- **Comprehensive Logging:** Gain insights into your model's performance with detailed logging. Track training progress, hyperparameter settings, and evaluation metrics. Visualize training statistics and loss curves for a deeper understanding of your model's behavior.
+- **Comprehensive Logging:** Detailed logging provides insights into your model's performance. Track training progress, hyperparameter settings, and evaluation metrics. Visualize training statistics and loss curves for a deeper understanding of your model's behavior.
 
 ### Additional Configuration Settings
 
