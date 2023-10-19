@@ -54,35 +54,36 @@ llm_builder = LLMBuilder(config)
 llm_builder.build()
 ```
 
-### Configuration
+## Configuration
 
-Configuring LLM Builder to meet your specific needs is made easy with the `LLMBuilderConfig` class. Below, we explain some configuration settings to build your LLM:
+Configuring LLM Builder to suit your specific needs is straightforward with the `LLMBuilderConfig` class. Here, we outline some of the key configuration settings for building your Large Language Model (LLM):
 
-**Language Model Configuration Attributes**
+### Language Model Configuration Attributes
 
-- **Customizable Architecture**: LLM Builder empowers you to craft a language model architecture that suits your specific research goals. Experiment with different model configurations, including the number of layers, attention mechanisms, and embedding layers.
+- **Customizable Architecture:** LLM Builder provides the flexibility to design a language model architecture tailored to your research objectives. You can experiment with various model configurations, including the number of layers, attention mechanisms, and embedding layers.
 
-- **Effortless Dataset Preparation**: Simplify the data preparation process with dataset_preparation_config that allow you to control dataset file paths, vocabulary size, and special tokens (e.g., eos, bos, pad, unk). This ensures that your data is compatible with the model.
+- **Effortless Dataset Preparation:** Streamline the data preparation process with `dataset_preparation_config`. This allows you to control dataset file paths, vocabulary size, and special tokens (e.g., eos, bos, pad, unk) to ensure data compatibility with the model.
 
-- **Versatile Training Optimization**: Fine-tune your model's performance with control over hyperparameters such as learning rate, weight decay, gradient clipping, and more.
+- **Versatile Training Optimization:** Fine-tune your model's performance by adjusting hyperparameters such as learning rate, weight decay, gradient clipping, and more.
 
-- **Multi-Device Training**: LLM Builder allows you to specify the hardware environment for training, whether it's a single CPU, GPU, TPU host, TPU core, or a multi-GPU setup. You can scale training efficiently across multiple devices, making the most of your available resources.
+- **Distributed Training:** Choose the hardware environment for training, whether it's a single CPU, GPU, TPU host, TPU core, or a multi-GPU setup. You can efficiently scale training across multiple devices, maximizing available resources.
 
-- **Checkpointing and Resuming**: Take advantage of checkpointing to save and resume your training from the last checkpoint. This feature preserves your training progress, even in cases of interruptions or system failures.
+- **Checkpointing and Resuming:** Take advantage of checkpointing to save and resume training from the last checkpoint. This feature preserves your training progress, even in cases of interruptions or system failures.
 
-- **Comprehensive Logging**: Gain insights into your model's performance with detailed logging. Track training progress, hyperparameter settings, and evaluation metrics. Visualize training statistics and loss curves for a deeper understanding of your model's behavior.
+- **Comprehensive Logging:** Gain insights into your model's performance with detailed logging. Track training progress, hyperparameter settings, and evaluation metrics. Visualize training statistics and loss curves for a deeper understanding of your model's behavior.
 
-**Additional Configuration Settings**
+### Additional Configuration Settings
 
-- **WandB Integration**: Optionally, you can enable logging to Weights and Biases (WandB) for enhanced project monitoring and collaboration. Configure the project name and run name as needed.
+- **WandB Integration:** Optionally enable logging to Weights and Biases (WandB) for enhanced project monitoring and collaboration. Configure the project name and run name as needed.
 
-- **Reproducibility**: Specify a random seed for reproducibility, ensuring consistent results across training runs.
+- **Reproducibility:** Specify a random seed for reproducibility, ensuring consistent results across training runs.
 
-- **Compile and Dataset Preparation Flags**: Choose whether to compile the model before training and specify whether dataset preparation is required if not already. These flags give you full control over the model development process.
-  
-With LLM Builder's comprehensive configuration options, you can create and train your Large Language Models with precision and flexibility.
+- **Compile and Dataset Preparation Flags:** Decide whether to compile the model before training and specify whether dataset preparation is required if not already performed. These flags provide you with full control over the model development process.
 
-For more detailed information about each configuration attributes, please refer to the [`LLMBuilderConfig class`](https://github.com/TheFaheem/llm-builder/blob/main/llm-builder/llm_builder.py#L38) docstring (as for now).
+With LLM Builder's extensive configuration options, you can create and train your Large Language Models with precision and flexibility.
+
+For more detailed information on each configuration attribute, please refer to the [LLMBuilderConfig class documentation](https://github.com/TheFaheem/llm-builder/blob/main/llm-builder/llm_builder.py#L38).
+
 
 
 ## Contributing
