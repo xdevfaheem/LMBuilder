@@ -18,18 +18,21 @@
 
 ## Introduction
 
-LLM Builder is an open-source deep learning training library specifically for building Large Language Models (LLMs). A visionary library designed to make the complex and often formidable task of building and training Large Language Models (LLMs) accessible to all, from fledgling enthusiasts to seasoned researchers. It have painstakingly removed the barriers of intricate code work, enabling a streamlined journey towards the construction of LLM without the burden of extensive code wrangling.
+LLM Builder is an open-source deep learning training library designed exclusively for constructing Large Language Models (LLMs). It aims to democratize the often complex and daunting task of LLM development, making it accessible to both novices and seasoned researchers. By eliminating the need for intricate code work, LLM Builder streamlines the path to constructing LLMs.
 
-Our repository empowers users to harness the potential of state-of-the-art language models without the need for extensive technical expertise. At its core, **LLM Builder** stands as an all-encompassing solution, encapsulating every facet of the LLM development process, spanning from architecting customizable model structures, handling dataset preparation to paving the way for a smoother transition to the training optimization phase, and meticulous logging, checkpointing, distributed training and much more, allowing you to focus on the big picture of your research.
+Our repository empowers users to leverage cutting-edge language models without requiring extensive technical expertise. At its core, **LLM Builder** offers a comprehensive solution, addressing every aspect of the LLM development process, from customizable model design, dataset preparation, to seamless training optimization, meticulous logging, checkpointing, distributed training, and more. This allows you to focus on the broader aspects of your research, unburdened by technical complexities.
 
 ## Features
 
-- **Customizable Architecture:** Tailor your LLM's architecture to suit your specific research goals.
-- **Effortless Dataset Preparation:** Streamline the prearation and preprocessing of data to pretrain your LLM.
-- **Distributed Training:** Optimize your training across a diverse array of devices for unparalleled performance.
-- **Comprehensive Logging and Checkpointing:** Keep track of every aspect of your LLM development for precise analysis and optimization.
+- **Customizable Architecture:** Customize your own LLM architecture with pre-defined architecture or (pre-built or custom) modules.
+  
+- **Effortless Dataset Preparation:** Simplify data preprocessing and tokenization for LLM pre-training.
+  
+- **Distributed Training:** Optimize training across diverse devices for superior performance, with support for various hardware configurations and efficient scaling across multiple devices.
 
-Check out [FEATURES](https://github.com/TheFaheem/llm-builder/blob/main/FEATURES.md) file for detailed features of this project.
+- **Comprehensive Logging and Checkpointing:** Track every aspect of LLM development and resume training seamlessly.
+
+For elaborate information on each feature, please refer to our [FEATURES.md](https://github.com/TheFaheem/llm-builder/blob/main/FEATURES.md).
 
 ## Getting Started
 
