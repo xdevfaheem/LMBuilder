@@ -26,7 +26,7 @@ Our repository empowers users to leverage cutting-edge language models without r
 
 - **Customizable Architecture:** Customize your own LLM architecture with pre-defined architecture or (pre-built or custom) modules.
   
-- **Effortless Dataset Preparation:** Simplify data preprocessing and tokenization for LLM pre-training.
+- **Effortless Dataset Preparation:** Simplify data preparation from preprocessing, tokenization and building the dataset files in suitable format for ypur LLM pre-training.
   
 - **Distributed Training:** Optimize training across diverse devices for superior performance, with support for various hardware configurations and efficient scaling across multiple devices.
 
@@ -58,7 +58,7 @@ llm_builder.build()
 
 Configuring LLM Builder to meet your specific needs is made easy with the `LLMBuilderConfig` class. Below, we explain some configuration settings to build your LLM:
 
-**Language Model Configuration**
+**Language Model Configuration Attributes**
 
 - **Customizable Architecture**: LLM Builder empowers you to craft a language model architecture that suits your specific research goals. Experiment with different model configurations, including the number of layers, attention mechanisms, and embedding layers.
 
