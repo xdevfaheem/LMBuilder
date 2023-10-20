@@ -1,6 +1,6 @@
 <h1 align="center"> 🛠️LLM Builder <h1/>
 <p>
-    <p align="center"> Facilitate the Seamless Construction of Robust Large Language Models <p/>
+    <p align="center"> Facilitate Seamless Construction of Robust Large Language Models <p/>
 <p/>
 
 ## Table of Contents
