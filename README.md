@@ -90,7 +90,10 @@ For details about other configurations attributes, please refer to the [LLMBuild
 
 ## Contributing
 
-We highly welcome contributions to LLM-Builder! Whether you want to report issues, submit pull requests, include specific functionality or provide feedback, please follow our [Contributing Guidelines](https://github.com/TheFaheem/llm-builder/blob/main/CONTRIBUTION.md).
+We highly welcome contributions to LLM-Builder! Whether you're a seasoned developer or just getting started, your involvement in our open-source project is highly appreciated inspite of whether you want to report issues, report bug, or report any unexpected behavior, submit pull requests which include specific functionality or provide feedback,
+
+Detailed instructions on how you can contribute can be found in our [Contributing Guidelines](https://github.com/TheFaheem/llm-builder/blob/main/CONTRIBUTING.md). Join me in making LLM-Builder a more efficient tool for building and training Large Language Models (LLMs) and collaborating with the community.
+
 
 ## License
 
@@ -106,10 +109,23 @@ This work is licensed under the [Creative Commons Attribution-NonCommercial-Shar
 
 ## Documentation
 
-Contribution Needed!
+Still haven't done yet. Contribution needed!
 
 ## Support
 
 If you have questions or run into issues, please visit our [Issue Tracker](https://github.com/TheFaheem/llm-builder/issues) for support and bug reporting.
 
+## Citation
+
+This project is currently contributed by [Faheem](https://github.com/TheFaheem). If you find LLM-Builder helpful for your research or work, please cite:
+```bibtex
+@online{llmbuilder,
+    author = {Mohammed Faheem},
+    title = {🛠️LLM-Builder: Facilitate Seamless Construction of Robust Large Language Models},
+    url = {https://github.com/TheFaheem/llm-builder},
+    year = {2023},
+    month = {oct}
+}
+```
+Your contribution is greatly appreciated, and I encourage you to acknowledge it when using 🛠️LLM-Builder in your research or projects.
 
