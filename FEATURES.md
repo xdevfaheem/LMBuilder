@@ -44,3 +44,4 @@ Gain deeper insights into your model's performance with our comprehensive loggin
 
 - **Visualized Model Understanding**: Enhance your understanding of your model's performance by logging training statistics and visualizing loss curves. llm-builder equips you with the insights needed to make informed decisions throughout the training process.
 
+- **WandB Integration:** Optionally enable logging to Weights and Biases (WandB) for enhanced project monitoring and collaboration. Configure the project name and run name as needed.
