@@ -32,7 +32,7 @@ Our repository empowers users to leverage cutting-edge language models without r
 
 - **Comprehensive Logging and Checkpointing:** Track every aspect of LLM development and resume training seamlessly.
 
-For elaborate information on each feature, please refer to our [FEATURES.md](https://github.com/TheFaheem/llm-builder/blob/main/FEATURES.md).
+For elaborate information, please refer to our [FEATURES.md](https://github.com/TheFaheem/llm-builder/blob/main/FEATURES.md).
 
 ## Getting Started
 
@@ -48,43 +48,45 @@ pip install llm-builder
 ```python
 from llm_builder import LLMBuilderConfig, LLMBuilder
 
-# Build the LLM
+# Configuring the llm-builder
 config = LLMBuilderConfig({'train': [("tinystories", 1.0)], 'validation': [("tinystories", 1.0)]})
+
+# Build LLM and Train
 llm_builder = LLMBuilder(config)
 llm_builder.build()
 ```
 
 ## Configuration
 
-Configuring LLM Builder to suit your specific needs is straightforward with the `LLMBuilderConfig` class. which provides settings and hyperparameters for your Large Language Model (LLM). This section highlights key attributes and settings for configuring your LLM.
+Configuring LLM Builder to suit your specific needs is straightforward with the `LLMBuilderConfig` class. which provides settings, hyperparameters for your LLM and key attributes for precise control. This section highlights some of it's key attributes and settings:
 
-### Language Model Configuration Attributes
+- `model_configs (dict)`: Tailor your LLM's architecture, adjust the number of layers, attention mechanisms, and more to align with your research objectives.
+- `dataset_config (dict)`: A dictionary containing a list of tuples specifying the prefixes of the memap files and their distribution weights for each data split.
+- `data_prep_config (dict)`: Configure data preparation by specifying dataset file paths, block size, vocabulary settings, and special tokens for compatibility with your data.
+- `device_type (str)`: Type of device for training (e.g., 'cpu', 'gpu', 'tpu').
+- `out_dir (str)`: The directory where model checkpoints and logs will be saved.
+- `data_dir (str)`: The directory containing the data and dataset files.
+- `wandb_log (bool)`: A flag for logging to WandB (Weights and Biases).
+- `wandb_project (str)`: Weights and Biases project name.
+- `wandb_run_name (str)`: Name for the Weights and Biases run.
+- `batch_size_per_device (int)`: Batch size per device used in training.
+- `init_from (str)`: Initialization of model from ('scratch' or 'resume').
+- `seed (int)`: Random seed for reproducibility.
+- `learning_rate (float)`: Learning rate for training.
+- `max_iters (int)`: Maximum number of training iterations.
+- `weight_decay (float)`: Weight decay for optimization.
+- `beta1 (float)`: Beta1 parameter for optimization.
+- `beta2 (float)`: Beta2 parameter for optimization.
+- `grad_clip_value (float)`: Gradient clipping value.
+- `decay_lr (bool)`: A flag for learning rate decay.
+- `warmup_iters (int)`: Number of warm-up iterations for learning rate scheduling.
+- `lr_decay_iters (int)`: Number of iterations for learning rate decay.
+- `min_lr (float)`: Minimum learning rate.
+- **And more...**
 
-- **Customizable Architecture:** LLM Builder empowers you to design a language model architecture that aligns with your specific research goals. You can experiment with various model configurations, including the number of layers, attention mechanisms, and embedding layers.
-  
-- **Effortless Dataset Preparation:** Streamline the data preparation process by configuring dataset preparation settings. This allow you to control dataset file paths, vocabulary size, and special tokens (e.g., eos, bos, pad, unk) to ensure data compatibility with your model.
+With LLM Builder's extensive configuration options, you can build and train your Large Language Models with precision and flexibility.
 
-- **Versatile Training Optimization:** Fine-tune your model's performance by adjusting hyperparameters such as learning rate, weight decay, gradient clipping, and more.
-
-- **Distributed Training:** LLM Builder offers flexibility in specifying the hardware environment for training. Whether you choose a single CPU, GPU, TPU host, TPU core, or a multi GPU, TPU setup, You can efficiently scale training across multiple devices, maximizing available resources.
-
-- **Checkpointing and Resuming:** Take advantage of built-in checkpointing to save and resume your training from the last checkpoint, ensuring your progress is preserved even in the face of interruptions or system failures.
-
-- **Comprehensive Logging:** Detailed logging provides insights into your model's performance. Track training progress, hyperparameter settings, and evaluation metrics. Visualize training statistics and loss curves for a deeper understanding of your model's behavior.
-
-### Additional Configuration Settings
-
-- **WandB Integration:** Optionally enable logging to Weights and Biases (WandB) for enhanced project monitoring and collaboration. Configure the project name and run name as needed.
-
-- **Reproducibility:** Specify a random seed for reproducibility, ensuring consistent results across training runs.
-
-- **Compile and Dataset Preparation Flags:** Decide whether to compile the model before training and specify whether dataset preparation is required if not already performed. These flags provide you with full control over the model development process.
-
-With LLM Builder's extensive configuration options, you can create and train your Large Language Models with precision and flexibility.
-
-For more detailed information on each configuration attribute, please refer to the [LLMBuilderConfig class documentation](https://github.com/TheFaheem/llm-builder/blob/main/llm-builder/llm_builder.py#L38).
-
-
+For details about other configurations attributes, please refer to the [LLMBuilderConfig class documentation](https://github.com/TheFaheem/llm-builder/blob/main/llm-builder/llm_builder.py#L38).
 
 ## Contributing
 
