@@ -92,6 +92,8 @@ For assistance, feedback, or inquiries related to 🛠️LMBuilder, We're here t
 
 - **Issue Tracker**: Encountered a bug or unexpected behaviours? Check our [Issue Tracker](https://github.com/TheFaheem/LMBuilder/issues) to report the issue or find solutions.
 
+- **Discussion Forum**: Join our [Discussion](https://github.com/TheFaheem/LMBuilder/discussions) where you can inquire, collaborate, learn, sharing ideas, support the community.
+
 - **Contact Us**: For sensitive or private matters, you can reach out directly via [mail](faheem.llmbuilder@gmail.com).
 
 - **Feature Requests**: Have ideas for new features, improvements, or enhancements? Please visit our [Issue Tracker](https://github.com/TheFaheem/LMBuilder/issues) to share your suggestions. We value your input and appreciate your suggestions to make our tool even better.
