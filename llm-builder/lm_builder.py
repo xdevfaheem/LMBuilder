@@ -35,7 +35,7 @@ except ImportError:
 from model import GPTConfig, GPT
 
 
-class LLMBuilderConfig:
+class LMBuilderConfig:
     
     def __init__(self, dataset_config: dict, **kwargs):
 
@@ -171,7 +171,7 @@ Example usage:
   gptconfig = GPTBuilderConfig({"train": [("tinystories", 1.0)], "test": [("tinystories", 1.0)]})
 """
 
-class LLMBuilder:
+class LMBuilder:
     
     
     def __init__(self, builder_config):
