@@ -15,7 +15,7 @@ from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 class PrepareDataset:
                     
     def __init__(self,
-                 dataset_folder,
+                 dest_dir,
                  hf_dataset=None,
                  dataset_files=None,
                  from_disk: bool = False,
@@ -38,7 +38,7 @@ class PrepareDataset:
         Initialize the PrepareDataset class (load dataset, build vocabulary and loading tokenizer instance for preaparing the dataset).
 
         Args:
-            dataset_folder (str): Path to the dataset folder.
+            dest_dir (str): Path to the dataset folder.
             hf_dataset (str, optional): Hugging Face dataset name.
             dataset_files (dict, optional): Dictionary containing dataset file names.
             from_disk (bool, optional): Whether to load the dataset from disk.
@@ -60,10 +60,10 @@ class PrepareDataset:
             None
         """
         
-        self.dataset_folder = dataset_folder
-        self.dataset_files_folder = os.path.join(self.dataset_folder, "dataset_files")
+        self.dest_dir = dest_dir
+        self.dataset_files_folder = os.path.join(self.dest_dir, "dataset_files")
         os.makedirs(self.dataset_files_folder, exist_ok=True)
-        self.data_txt_path = os.path.join(dataset_folder, f'{dset_prefix}.txt')
+        self.data_txt_path = os.path.join(dest_dir, f'{dset_prefix}.txt')
         self.dset_prefix = dset_prefix
 
         if from_disk:
@@ -214,7 +214,7 @@ class PrepareDataset:
         yt = True if vocab_model_type=="yt" else False
         
         print("\nChecking whether the vocabulary file already exist...")
-        if not os.path.isfile(os.path.join(self.dataset_folder, f"{vocab_prefix}_{vocab_size}.model")):
+        if not os.path.isfile(os.path.join(self.dest_dir, f"{vocab_prefix}_{vocab_size}.model")):
             
             print(f"Going to create a vocabulary using `{'SentencePiece' if sp else 'Youtokentome'}` for this dataset as it doesn't already exist \nChecking whether the dataset txt file exist to build vocab file")
             if not os.path.isfile(self.data_txt_path):
@@ -227,17 +227,17 @@ class PrepareDataset:
                 
             try:
                 print(f"Training the `{'SentencePiece' if sp else 'Youtokentome'}` Vocab with: \nFile Prefix: {vocab_prefix} \nVocab Size: {vocab_size} \nPAD ID: {pad_id} \nEOS ID: {eos_id} \nUNK ID: {unk_id} \nBOS ID: {bos_id} \n", flush=True)
-                Tokenizer.train(data_txt_path, self.dataset_folder, youtokenizer=yt, sp_tokenizer=sp, vocab_file_prefix=vocab_prefix, vocab_size=vocab_size, pad_id=pad_id, unk_id=unk_id, eos_id=eos_id, bos_id=bos_id)
+                Tokenizer.train(data_txt_path, self.dest_dir, youtokenizer=yt, sp_tokenizer=sp, vocab_file_prefix=vocab_prefix, vocab_size=vocab_size, pad_id=pad_id, unk_id=unk_id, eos_id=eos_id, bos_id=bos_id)
                 print("Vocabulary Created Successfully!")
             
             except Exception as e:
                 print("An error occurred during vocabulary training:", e)
 
-            return os.path.join(self.dataset_folder, f"{vocab_prefix}_{vocab_size}.model")
+            return os.path.join(self.dest_dir, f"{vocab_prefix}_{vocab_size}.model")
 
         else:
             print("Vocabulary File Already Exist! Won't Train an other.\n")
-            return os.path.join(self.dataset_folder, f"{vocab_prefix}_{vocab_size}.model")
+            return os.path.join(self.dest_dir, f"{vocab_prefix}_{vocab_size}.model")
             
     # an utility function for preparing the dateset by preparing a shard of the dataset and tracking time
     def prepare_dataset(self, split: str, dataset: datasets.Dataset, max_length: int, num_blocks: int, i: int, mode="process"):
