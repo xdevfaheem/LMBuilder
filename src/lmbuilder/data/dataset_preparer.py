@@ -8,15 +8,12 @@ from pathlib import Path
 from tqdm.auto import tqdm
 import numpy as np
 from multiprocessing import Process, cpu_count, current_process, Pool, Lock
-import datasets # huggingface datasets
 from datasets import get_dataset_split_names, load_dataset, load_from_disk, Dataset, DatasetDict
 import sentencepiece as spm
-import tiktoken
 import json
 import pandas as pd
-from functools import partial
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
-from lmlogger import LMBuilderLogger
+from lmbuilder.lmlogger import LMBuilderLogger
 from tokenizer import Tokenizer
 from packed_dataset import PackedDatasetBuilder
 
@@ -54,7 +51,7 @@ class LMBuilderDatasetPreparer:
         tokenizer (Tokenizer): The tokenizer used for text encoding.
         logger (Logger): A configured logger for logging messages.
 
-    Example:
+    Usage Example:
         source_path = "data/your_dataset"
         tokenizer_path = "checkpoints/your_tokenizer.model"
         destination_path = "data/your_destination"
@@ -69,14 +66,14 @@ class LMBuilderDatasetPreparer:
     """
     
     def __init__(self,
-                 source_path,
-                 tokenizer_path,
-                 destination_path,
-                 log_dir,
-                 filenames_set: dict,
-                 exclude_sets: list = None,
-                 train_percentage: float = 1.0
-                 ):
+                source_path,
+                tokenizer_path,
+                destination_path,
+                log_dir,
+                filenames_set: dict,
+                exclude_sets: list = None,
+                train_percentage: float = 1.0
+                ):
         
         
         # source_path is the path to the dataset files
@@ -225,22 +222,32 @@ class LMBuilderDatasetPreparer:
             filenames_sets = {k: v for k, v in self.filenames_set.items() if v >= curr_train_dir}
         
         for dset_name, path_pattern in filenames_sets.items():
-            
-            train_start_idx = curr_train_idx if curr_train_dir == path_pattern else 0
-            val_start_idx = curr_val_idx if curr_val_dir == path_pattern else 0
 
-            self.logger_inst.log_timestamp()
-            self.logger.info(f"Processing {path_pattern}")
-            train_filenames = glob.glob(os.path.join(self.source_path, path_pattern), recursive=True)
-            val_filenames = None
-            if self.exclude_sets:
-                train_filenames = [filename for filename in train_filenames if not any(exclude in filename for exclude in self.exclude_sets)]
+            if os.path.isfile(path_pattern):
+                self.logger_inst.log_timestamp()
+                self.logger.info(f"Processing file {path_pattern}")
+                train_filenames = [path_pattern]
+                val_filenames = None
+                train_start_idx = 0
 
-            if self.train_percentage < 1.0:
-                num_files = int(len(train_filenames) * self.train_percentage)
-                train_filenames = train_filenames[:num_files]
-                val_filenames = train_filenames[num_files:]
-                
+            else:
+                train_start_idx = curr_train_idx if curr_train_dir == path_pattern else 0
+                val_start_idx = curr_val_idx if curr_val_dir == path_pattern else 0
+
+                self.logger_inst.log_timestamp()
+                self.logger.info(f"Processing {path_pattern}")
+                train_filenames = glob.glob(os.path.join(self.source_path, path_pattern), recursive=True)
+                val_filenames = None
+                if self.exclude_sets:
+                    train_filenames = [filename for filename in train_filenames if not any(exclude in filename for exclude in self.exclude_sets)]
+
+                if self.train_percentage < 1.0:
+                    if train_filenames<3:
+                        raise ValueError("A subdirectory or a path pattern should atleast have 3 files inside it!")
+                    num_files = int(len(train_filenames) * self.train_percentage)
+                    train_filenames = train_filenames[:num_files]
+                    val_filenames = train_filenames[num_files:] # if the len(train_filenames) == num_files then val_filenames = []
+                    
             with prl_ctx_mngr(max_workers=(num_workers), initializer=tqdm.set_lock, initargs=(Lock(),)) as executor:
                 list(executor.map(
                     concurrent_dataset_preparation,
@@ -250,7 +257,7 @@ class LMBuilderDatasetPreparer:
                     ],
                     chunksize=1
                 ))
-                if val_filenames is not None:
+                if val_filenames is not None or []:
                     list(executor.map(
                         concurrent_dataset_preparation,
                         [
@@ -274,3 +281,5 @@ if __name__ == "__main__":
     
     dataset_preparer = LMBuilderDatasetPreparer(source_path, tokenizer_path, destination_path, file_set, exclude_sets, percentage=0.95)
     dataset_preparer.prepare(os.cpu_count(), prl_pool="process", max_length=max_length, num_blocks=blocks)
+    
+    lm = LMBuilderDatasetPreparer()
