@@ -13,36 +13,32 @@ from functools import partial
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
 class PrepareDataset:
-
+                    
     def __init__(self,
-                source_dir,
-                dest_dir,
-                filenames_set,
-                hf_dataset=None,
-                dataset_files=None,
-                from_disk: bool = False,
-                local_dataset_path=None,
-                train_dset_list=None,
-                val_dset_list=None,
-                train_data_percentage=0.8,
-                dset_prefix="tinystories",
-                build_vocab=False,
-                vocab_size=8000,
-                vocab_type="yt",
-                eos=1,
-                bos=0,
-                pad=2,
-                unk=3,
-                **kwargs,
+                 dest_dir,
+                 hf_dataset=None,
+                 dataset_files=None,
+                 from_disk: bool = False,
+                 local_dataset_path=None,
+                 train_dset_list=None,
+                 val_dset_list=None,
+                 train_data_percentage=0.8,
+                 dset_prefix="tinystories",
+                 build_vocab=False,
+                 vocab_size=8000,
+                 vocab_type="yt",
+                 eos=1,
+                 bos=0,
+                 pad=2,
+                 unk=3,
+                 **kwargs
                 ):
 
         """
         Initialize the PrepareDataset class (load dataset, build vocabulary and loading tokenizer instance for preaparing the dataset).
 
         Args:
-            source_dir: Path to Dataset Directory
-            dest_dir (str): Destination directory.
-            filenames_set: dictionary containing prefix to be used (key) and subdir of the dataset file (values)
+            dest_dir (str): Path to the dataset folder.
             hf_dataset (str, optional): Hugging Face dataset name.
             dataset_files (dict, optional): Dictionary containing dataset file names.
             from_disk (bool, optional): Whether to load the dataset from disk.
@@ -63,10 +59,8 @@ class PrepareDataset:
         Returns:
             None
         """
-
-        self.source_dir = source_dir
+        
         self.dest_dir = dest_dir
-        self.filenames_set = filenames_set
         self.dataset_files_folder = os.path.join(self.dest_dir, "dataset_files")
         os.makedirs(self.dataset_files_folder, exist_ok=True)
         self.data_txt_path = os.path.join(dest_dir, f'{dset_prefix}.txt')
@@ -74,9 +68,9 @@ class PrepareDataset:
 
         if from_disk:
             if not os.path.exists(local_dataset_path):
-                assert (train_dset_list), "atleast train dataset `text` list should be passed" # val_dset_list is optional as validation set will be splitted from train set
+                assert (train_dset_list), "atleast train dataset `text` list should be passed" # val_dset_list is optional as validation set will be splitted from train set 
                 self.create_custom_dataset(train_dset_list, local_dataset_path, val_list=val_dset_list)
-
+        
         if build_vocab:
             self.splitted_dataset, self.dataset_splits = self.load_dsets(hf_dset_name=hf_dataset, data_files=dataset_files, from_disk=from_disk, dataset_path=local_dataset_path, train_p=train_data_percentage)
             print("\nDataset: ",self.splitted_dataset, flush=True)
@@ -90,12 +84,12 @@ class PrepareDataset:
             if self.tokenizer.backend == "youtoken":
                 setattr(self.tokenizer, "eos_id", eos)
                 setattr(self.tokenizer, "bos_id", bos)
-
+                
         else:
             self.splitted_dataset, self.dataset_splits = self.load_dsets(hf_dset_name=hf_dataset, data_files=dataset_files, from_disk=from_disk, dataset_path=local_dataset_path, train_p=train_data_percentage)
             # loading openai's tiktoken bpe tokenizer
             self.tokenizer = Tokenizer(model_path=None, tiktokenizer=True)
-
+        
     # Utility function for loading the Hugging Face dataset either from local disk or from the Hub
     def load_dsets(self, hf_dset_name: str = None, from_disk=False, data_files: dict=None, dataset_path=None, train_p: float = 0.9):
 
@@ -115,12 +109,12 @@ class PrepareDataset:
         """
 
         assert ((from_disk and dataset_path) or hf_dset_name is not None), "the Dataset Should be Either loaded from local path or from hugging face dataset repo"
-
+        
         if from_disk:
             print("\nLoading dataset from the disk...")
             assert dataset_path is not None, "Pass the path for local dataset which was saved to disk earlier."
             dataset_dict = load_from_disk(dataset_path)
-
+            
         else:
             print("\nLoading dataset from huggingface...")
             p = train_p*100
@@ -135,21 +129,21 @@ class PrepareDataset:
 
         if len(dataset_dict) == 1:
             dataset_dict.update(dataset_dict[list(dataset_dict.keys())[0]].train_test_split(test_size=0.0001, seed=2354, shuffle=True))
-
+        
         assert len(dataset_dict) == 2, "Dataset Should have only 2 splits"
-
+        
         split_keys = list(dataset_dict.keys())
         # key much be 'train' and 'val' to match up in data loading in GPTBuilder
         dataset_dict.update({"train":dataset_dict.pop(split_keys[0])})
         dataset_dict.update({"val":dataset_dict.pop(split_keys[1])})
-
+        
         assert dataset_dict.keys()[0] == "train", "The key of the first split much be 'train'"
         assert dataset_dict.keys()[1] == "val", "The key of the second split much be 'val'"
-
+        
         final_splits = list(dataset_dict.keys())
         if from_disk:
             return dataset_dict, final_splits
-
+        
         else:
             return DatasetDict(dataset_dict), final_splits
 
@@ -167,7 +161,7 @@ class PrepareDataset:
         Returns:
             None
         """
-
+        
         if val_list is not None:
             dataset = DatasetDict({
                 'train': Dataset.from_dict({'text': train_list }),
@@ -183,7 +177,7 @@ class PrepareDataset:
     def write_to_txt(self, file_path: str, dataset: dict):
         """
         Write the dataset to a text file.
-
+        
         Args:
             file_path (str): Path to the output text file.
             dataset (dict): Dictionary containing split datasets.
@@ -215,27 +209,27 @@ class PrepareDataset:
         Returns:
             vocab_path (str): Path to the trained vocabulary model.
         """
-
+        
         sp = True if vocab_model_type=="sp" else False
         yt = True if vocab_model_type=="yt" else False
-
+        
         print("\nChecking whether the vocabulary file already exist...")
         if not os.path.isfile(os.path.join(self.dest_dir, f"{vocab_prefix}_{vocab_size}.model")):
-
+            
             print(f"Going to create a vocabulary using `{'SentencePiece' if sp else 'Youtokentome'}` for this dataset as it doesn't already exist \nChecking whether the dataset txt file exist to build vocab file")
             if not os.path.isfile(self.data_txt_path):
                 print("Writing Dataset to a txt file as it doesn't already exist")
                 data_txt_path = self.write_to_txt(self.data_txt_path, dataset)
-
+                
             else:
                 print("Not going to write the dataset to a txt file as it already exist")
                 data_txt_path = self.data_txt_path
-
+                
             try:
                 print(f"Training the `{'SentencePiece' if sp else 'Youtokentome'}` Vocab with: \nFile Prefix: {vocab_prefix} \nVocab Size: {vocab_size} \nPAD ID: {pad_id} \nEOS ID: {eos_id} \nUNK ID: {unk_id} \nBOS ID: {bos_id} \n", flush=True)
                 Tokenizer.train(data_txt_path, self.dest_dir, youtokenizer=yt, sp_tokenizer=sp, vocab_file_prefix=vocab_prefix, vocab_size=vocab_size, pad_id=pad_id, unk_id=unk_id, eos_id=eos_id, bos_id=bos_id)
                 print("Vocabulary Created Successfully!")
-
+            
             except Exception as e:
                 print("An error occurred during vocabulary training:", e)
 
@@ -244,7 +238,7 @@ class PrepareDataset:
         else:
             print("Vocabulary File Already Exist! Won't Train an other.\n")
             return os.path.join(self.dest_dir, f"{vocab_prefix}_{vocab_size}.model")
-
+            
     # an utility function for preparing the dateset by preparing a shard of the dataset and tracking time
     def prepare_dataset(self, split: str, dataset: datasets.Dataset, max_length: int, num_blocks: int, i: int, mode="process"):
 
@@ -253,7 +247,7 @@ class PrepareDataset:
 
         Args:
             split (str): Split name (e.g., "train", "val").
-            dataset (datasets.Dataset): Dataset (Sharded) to prepare.
+            dataset (datasets.Dataset): Dataset (Sharded) to prepare. 
             max_length (int): Maximum length of each example.
             num_blocks (int): Number of blocks.
             i (int): Process/thread ID.
@@ -262,13 +256,13 @@ class PrepareDataset:
         Returns:
             None
         """
-
+        
         current = current_process()
         if mode=="process":
             pos = current._identity[0]-1
         elif mode=="thread":
             pos=None
-
+            
         builder = PackedDatasetBuilder(
                         outdir=os.path.join(self.dataset_files_folder, split),
                         prefix=self.dset_prefix,
@@ -286,14 +280,14 @@ class PrepareDataset:
                 #assert ids[-1] == self.tokenizer.eos_id, "Last token of the tokenized id is not equal to tokenizer's eos id"
                 builder.add_array(np.array(ids, dtype=builder.dtype))
                 pbar.update(1)
-
+            
         builder.write_reminder()
         dataset = None # to free up memory
-
+        
         """
         we have used num_block=1024, max_len=1024, so chunk_size=(1024+1)*1024=1,049,600. as itemsize of data type is 2. so each id occupy 2 bytes.
         so 1,049,600 ids occupy 2,099,200 bytes that ~2.1MB binary file. we got around 63 files so total bytes of data is 132,249,600. so if 1 id occupy two bytes then total tokens in the dataset much be ~66,124,800.
-
+        
         Calculate the total tokens using this:
         from tqdm.auto import tqdm
         tokenizer = Tokenizer(model_path="./tinystories_8000.model", youtokenizer=False, sp_tokenizer=True)
@@ -303,7 +297,7 @@ class PrepareDataset:
             total_tokens += len(tokenizer.encode(datum, bos=False, eos=True, max_length=1024))
         print(f"Total tokens in the train set: {total_tokens}")
         """
-
+        
     # prepare the memmory maped binary file dataset
     def prepare(self, max_length: int = 512, num_blocks: int = 1024):
 
@@ -317,12 +311,12 @@ class PrepareDataset:
         Returns:
             data_dirs (list): List of data directories.
         """
-
+        
         data_dirs = []
-
+        
         writer_lock = Lock()
         global prepare_shard #prevent pickling error
-
+        
         def prepare_shard(args):
             split, n_process, max_len, num_block, process_id, mode = args
             print(f"Process {process_id} started!\n", flush=True)
@@ -332,7 +326,7 @@ class PrepareDataset:
             end_time = time.time()
             elapsed_time = end_time - start_time
             print(f"Process {process_id} finished in {elapsed_time:.2f} seconds", flush=True)
-
+        
         for split in self.dataset_splits:
             data_dirs.append(str(os.path.join(self.dataset_files_folder, split)))
             num_process = (cpu_count()*2) if split == "train" else (cpu_count())
@@ -344,7 +338,7 @@ class PrepareDataset:
                     mode="thread"
                 print(f"\nPreparing `{split.capitalize()}` Set with \nNumber of process: {num_process} \nMaximum Length: {max_length} \nNumber of Blocks: {num_blocks} \nMode: {mode}\n", flush=True)
                 list(executor.map(prepare_shard, [(split, num_process, max_length, num_blocks, process_id, mode) for process_id in range(num_process)], chunksize=1))
-
+        
         return data_dirs
 
 # Uncomment the following lines if you want to run the code as a script
