@@ -1,7 +1,8 @@
 import os
-import time
-import math
-import pickle
+import sys
+import random
+import yaml
+import glob
 from pathlib import Path
 from contextlib import nullcontext
 import numpy as np
@@ -33,11 +34,12 @@ try:
 except ImportError:
   assert False, "Missing package syncfree; the package is available in torch-xla>=1.11. upgrade the library using `pip install torch-xla --upgrade`"
 from model import GPTConfig, GPT
+from lmlogger import LMBuilderLogger
 
 
 class LMBuilderConfig:
     
-    def __init__(self, dataset_config: dict, **kwargs):
+    def __init__(self, config_path):
 
         """
         Configuration Class's Constructor for the Language Model (LLM) builder. Contains various settings and hyperparameters for the model.
@@ -87,10 +89,19 @@ class LMBuilderConfig:
             - prepare_dataset (bool): Flag for dataset preparation if not prepared already.
         """
         
-        self.dataset_config = dataset_config
-        for key, value in kwargs.items():
+        # read yaml and return contents
+        if not config_path.endswith(".yaml"):
+            raise ValueError("Inappropriate file path! Yaml file needed.")
+        with open(config_path, 'r') as file:
+            try:
+                configs =  yaml.safe_load(file)
+            except yaml.YAMLError as exc:
+                print("Error Occured when reading the file\n", exc)
+        
+        for key, value in configs.items():
             setattr(self, key, value)
-
+    
+    dataset_config: dict = {}
     out_dir = 'out'
     data_dir="./"
     model_name="test_model"
@@ -159,7 +170,7 @@ class LMBuilderConfig:
     warmup_iters = 2000
     lr_decay_iters = 600000
     min_lr = 6e-5
-    backend = 'nccl'
+    ddp_backend = 'nccl'
     device_type = 'cpu'
     seed = 1337
     is_compile=True
@@ -215,7 +226,7 @@ class LMBuilder:
             - warmup_iters (int): Number of warm-up iterations for learning rate scheduling.
             - lr_decay_iters (int): Number of iterations for learning rate decay.
             - min_lr (float): Minimum learning rate.
-            - backend (str): Backend for DDP (e.g., 'nccl').
+            - ddp_backend (str): Backend for DDP (e.g., 'nccl').
             - device_type (str): Type of device for training (e.g., 'cpu', 'gpu', 'tpu').
             - compile (bool): Flag indicating whether to compile the model before training.
             - dataset_preparation_config (dict): Configuration for data preprocessing.
@@ -233,7 +244,7 @@ class LMBuilder:
         self.data_dir = builder_config.data_dir
         self.dataset_dir = os.path.join(self.data_dir, "dataset_files")
         self.model_args = builder_config.model_configs
-        self.paraloader_kwargs = pl_kwargs
+        self.paraloader_kwargs = builder_config.pl_kwargs
         self.eval_interval = builder_config.eval_interval
         self.num_epochs = builder_config.total_epochs
         self.log_interval = builder_config.log_interval
@@ -244,8 +255,8 @@ class LMBuilder:
         self.wandb_log = builder_config.wandb_log
         self.wandb_project = builder_config.wandb_project
         self.wandb_run_name = builder_config.wandb_run_name
-        self.tpu_ddp = tpu_ddp
-        self.pjrt_dist = pjrt_dist
+        self.tpu_ddp = builder_config.tpu_ddp
+        self.pjrt_dist = builder_config.pjrt_dist
         self.batch_size_per_device = builder_config.batch_size_per_device
         self.gradient_accumulation_steps = builder_config.gradient_accumulation_steps
         self.seed = builder_config.seed
@@ -260,14 +271,13 @@ class LMBuilder:
         self.warmup_iters = builder_config.warmup_iters
         self.lr_decay_iters = builder_config.lr_decay_iters
         self.min_lr = builder_config.min_lr
-        self.backend = builder_config.backend
+        self.ddp_backend = builder_config.ddp_backend
         self.device_type = builder_config.device_type
         self.compile= builder_config.is_compile
         self.dataset_preparation_config = builder_config.data_prep_config
         self.prepare_dataset = builder_config.prepare_dataset
         self.train_data_config = builder_config.dataset_config["train"]
         self.val_data_config = builder_config.dataset_config["validation"]
-        self.setup()
         
     def setup(self): 
 
@@ -293,8 +303,10 @@ class LMBuilder:
         """
 
         
-        self.logger = self._configure_logging(log_dir, "setup")
-        train_logger = self._configure_logging(log_dir, "training")
+        logger_inst = LMBuilderLogger(log_dir, "setup", backup_count=4)
+        self.logger = logger_inst.logger
+        train_logger_inst = self._configure_logging(log_dir, "training", backup_count=4)
+        train_logger = train_logger_inst.logger
         
         self.logger.info("Setting up host device...")
         device = torch.cuda.current_device() if self.device_type == 'gpu' else xm.xla_device() if self.device_type == 'tpu' else torch.device('cpu') if self.device_type == 'cpu' else None
@@ -312,9 +324,9 @@ class LMBuilder:
         if self.device_type == "gpu":
 
             # various inits, derived attributes, I/O setup
-            if ddp := int(os.environ.get('RANK', -1)) != -1:
+            if (ddp := int(os.environ.get('RANK', -1))) != -1:
                 self.logger.info("Training on multiple GPU!")
-                init_process_group(backend=backend)
+                init_process_group(backend=self.ddp_backend)
                 rank = int(os.environ['RANK'])
                 local_rank = int(os.environ['LOCAL_RANK'])
                 world_size = int(os.environ['WORLD_SIZE'])
@@ -394,9 +406,9 @@ class LMBuilder:
             # model out directory
             self.logger.info("Setting up model and log directories")
             model_dir = os.path.join(self.out_dir.absolute().resolve(), self.model_name)
-            os.makedirs.(model_dir, exist_ok=True)
+            os.makedirs(model_dir, exist_ok=True)
             log_dir = os.path.join(Path(model_dir).absolute().resolve(), "log")
-            os.makedirs.(log_dir, exist_ok=True)
+            os.makedirs(log_dir, exist_ok=True)
         torch.manual_seed(self.seed + seed_offset)
         torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
         torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
@@ -487,7 +499,7 @@ class LMBuilder:
             for k,v in list(state_dict.items()):
                 if k.startswith(unwanted_prefix):
                     state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
-            model.load_state_dict(state_dict)
+            self.model.load_state_dict(state_dict)
             global_iter = checkpoint['global_iter'] # global iteration. this will be updated during training
             initial_iter = checkpoint['global_iter'] # initial iteration. this will stay the same until training stops to identify no. of iteration in one training life
             global_step = checkpoint['global_step']
@@ -500,7 +512,7 @@ class LMBuilder:
         self.logger.info("Moving the model to host device...")
         self.model.to(device) # move the initialized model to host device
 
-        if self.device_type == "tpu" and xr.using_pjrt()):
+        if (self.device_type == "tpu" and xr.using_pjrt()):
             xm.broadcast_master_param(self.model)
 
         # compile the model
@@ -515,12 +527,12 @@ class LMBuilder:
                 #sys.exit(1)
         
         # wrap model into DDP container
-        if self.ddp:
+        if ddp:
             self.model = DDP(self.model, device_ids=[local_rank])
         elif self.tpu_ddp:
             self.model = DDP(self.model, gradient_as_bucket_view=True)
         
-        self.model = self.model.module if self.ddp else self.model # plug the model from ddp container if training over multi-gpu setup or keep the model as it is.
+        self.model = self.model.module if ddp else self.model # plug the model from ddp container if training over multi-gpu setup or keep the model as it is.
 
         # initializing gradient scaler
         self.logger.info("Setting up gradient scaler...")
@@ -547,80 +559,42 @@ class LMBuilder:
         # initialiting the Trainer class instance
         self.logger.info("Setting up the trainer...")
         self.trainer = Trainer(
-                trainer_cfg,
-                train_dataloader,
-                val_dataloader,
-                wandb_log=self.wandb_log,
-                wandb_project=self.wandb_project,
-                wandb_run_name=self.wandb_run_name,
-                out_dir=model_dir,
-                log_dir=log_dir,
-                logger=train_logger
-                global_step=global_step,
-                global_iter=global_iter,
-                initial_iter=initial_iter
-                best_val_loss=best_val_loss,
-                curr_epoch=current_epoch,
-                total_epochs=self.num_epochs,
-                scaler=scaler,
-                device=device,
-                ddp=ddp,
-                tpu_ddp = self.tpu_ddp,
-                pjrt_dist = self.pjrt_dist,
-                decay_lr=self.decay_lr,
-                warmup_iters = self.warmup_iters
-                lr_decay_iters = self.lr_decay_iters
-                min_lr = self.min_lr
-                learning_rate = self.learning_rate
-                eval_interval=self.eval_interval,
-                always_save_checkpoint=self.always_save_checkpoint,
-                model_args=self.model_args,
-                eval_only=self.eval_only,
-                gradient_accumulation_steps=self.gradient_accumulation_steps,
-                grad_clip=self.grad_clip_value,
-                ctx=ctx_mnr,
-                log_interval=self.log_interval,
-                max_iters=self.max_iters,
-                mastr_proc=master_process,
-            )
-            
-    def _configure_logging(self, log_dir, file_name):
+            train_dataloader,
+            val_dataloader,
+            wandb_log=self.wandb_log,
+            wandb_project=self.wandb_project,
+            wandb_run_name=self.wandb_run_name,
+            out_dir=model_dir,
+            log_dir=log_dir,
+            logger=train_logger,
+            global_step=global_step,
+            global_iter=global_iter,
+            initial_iter=initial_iter,
+            best_val_loss=best_val_loss,
+            curr_epoch=current_epoch,
+            total_epochs=self.num_epochs,
+            scaler=scaler,
+            device=device,
+            ddp=ddp,
+            tpu_ddp = self.tpu_ddp,
+            pjrt_dist = self.pjrt_dist,
+            decay_lr=self.decay_lr,
+            warmup_iters = self.warmup_iters,
+            lr_decay_iters = self.lr_decay_iters,
+            min_lr = self.min_lr,
+            learning_rate = self.learning_rate,
+            eval_interval=self.eval_interval,
+            always_save_checkpoint=self.always_save_checkpoint,
+            model_args=self.model_args,
+            eval_only=self.eval_only,
+            gradient_accumulation_steps=self.gradient_accumulation_steps,
+            grad_clip=self.grad_clip_value,
+            ctx=ctx_mnr,
+            log_interval=self.log_interval,
+            max_iters=self.max_iters,
+            mastr_proc=master_process
+        )
 
-        """
-        Configure the logging mechanism for the LLMBuilder.
-
-        Args:
-            log_dir (str): The directory where log files will be stored.
-            file_name (str): The name of the log file.
-
-        Returns:
-            logger (Logger): A configured logger object for logging messages.
-        """
-        
-        # Create a logger
-        logger = logging.getLogger(__name__)
-        logger.setLevel(logging.DEBUG)  # Set the lowest log level (DEBUG)
-
-        # Create a formatter for log messages
-        log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        formatter = logging.Formatter(log_format)
-
-        # Create a file handler to save logs to a file
-        log_file = os.path.join(log_dir, f"{file_name}.log")
-        file_handler = logging.RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=3)  # Rotate after 10MB
-        file_handler.setFormatter(formatter)
-        file_handler.setLevel(logging.DEBUG)  # Log all messages to the file
-
-        # Create a console handler for displaying log messages on the console
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        console_handler.setLevel(logging.INFO)  # Log INFO and above to the console
-
-        # Add the handlers to the logger
-        logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
-        
-        return logger
     
     def create_dataloader(
         self,

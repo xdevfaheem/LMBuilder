@@ -65,7 +65,7 @@ def is_pkg_req_met(req, msg=False):
         message = f"{ex.__class__.__name__}: {ex}. Package with specified version critiria not met! \n Try running `pip install -U {req!r}`"
     
     if msg:
-        print(messsage)
+        print(message)
     
     return met
 
