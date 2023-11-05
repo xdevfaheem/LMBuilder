@@ -8,14 +8,13 @@ from pathlib import Path
 from tqdm.auto import tqdm
 import numpy as np
 from multiprocessing import Process, cpu_count, current_process, Pool, Lock
-from datasets import get_dataset_split_names, load_dataset, load_from_disk, Dataset, DatasetDict
-import sentencepiece as spm
+# from datasets import get_dataset_split_names, load_dataset, load_from_disk, Dataset, DatasetDict
 import json
 import pandas as pd
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from lmbuilder.lmlogger import LMBuilderLogger
 from tokenizer import Tokenizer
-from packed_dataset import PackedDatasetBuilder
+from memap_dataset import MemMappedDatasetBuilder
 
 
 class LMBuilderDatasetPreparer:
@@ -155,7 +154,7 @@ class LMBuilderDatasetPreparer:
         
         curr_file_idx = 0
 
-        builder = PackedDatasetBuilder(
+        builder = MemMappedDatasetBuilder(
             outdir=out_path,
             prefix=prefix,
             chunk_size=chunk_size,
