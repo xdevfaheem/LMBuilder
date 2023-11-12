@@ -1,6 +1,7 @@
 from functools import lru_cache
 from importlib.util import find_spec
 import pkg_resources
+import yaml
 
 
 def number_to_words(number):
@@ -27,6 +28,17 @@ def number_to_words(number):
         return number_to_words(number // 1000000000000) + " trillion" + (" " + number_to_words(number % 1000000000000) if number % 1000000000000 != 0 else "")
     else:
         raise ValueError("Number out of range")
+    
+def yaml_to_dict(yaml_path):
+    # read yaml and return contents
+    if not yaml_path.endswith(".yaml"):
+        raise ValueError("Inappropriate file Yaml file needed.")
+    with open(yaml_path, 'r') as file:
+        try:
+            yaml_dict =  yaml.safe_load(file)
+        except yaml.YAMLError as exc:
+            print("Error Occured when reading the file\n", exc)
+    return yaml_dict
 
 @lru_cache()
 def is_package_available(package_name: str) -> bool:
