@@ -1,0 +1,169 @@
+# Predefined configuration for ByteLevelBPE Tokenizer. DO NOT EDIT.
+
+# Prefix of the tokenizer file to save.
+tokenizer_prefix: "lmbuilder_tokenizer"
+
+# Specifies how to save the tokenizer:
+# - "model": Save tokenizer's core model as two files (vocab, merge).
+# - "string": Serialize the JSON version of tokenizer as a string.
+# - "file": Save the entire tokenizer and its configuration into one file.
+save_method: "file"
+
+# Type of tokenizer to use:
+# - "custom": Customizable Tokenizer from normalizer to trainer.
+# - "wordpiece": BertWordPieceTokenizer.
+# - "byte": ByteLevelBPETokenizer.
+# - "char": CharBPETokenizer.
+# - "sp_bpe": SentencePieceBPETokenizer.
+# - "sp_uni": SentencePieceUnigramTokenizer.
+tokenizer_type: "custom"
+
+# Dictionary containing arguments and keyword arguments for the desired predefined tokenizer_type.
+# If tokenizer_type is not custom, use an empty dictionary.
+tokenizer_kwargs: {}
+
+# Core model to use if tokenizer_type is "custom".
+# - "bpe" for BPE.
+# - "uni" for Unigram.
+# - "wordlevel" for WordLevel.
+# - "wordpiece" for WordPiece.
+model: null
+
+
+# PREDEFINED NORMALIZER to use if tokenizer_type is "custom":
+# - "bert_norm": BertNormalizer.
+# - "nfc": NFC.
+# - "nfd": NFD.
+# - "nfkc": NFKC.
+# - "nfkd": NFKD.
+# - "nmt": Nmt.
+# - "lowc": Lowercase.
+# - "strip": Strip.
+# - "strip_acc": StripAccents.
+# - "prpnd": Prepend.
+# - "pre_comp": Precompiled.
+# - "repl": Replace.
+
+# CUSTOM NORMALIZER:
+# You can pass a custom normalizer class too. Define it in custom_comps.py and pass the class name, for example,
+# - "CustomNormalizer" for a custom normalizer defined in custom_comps.py.
+# NOTE: Ensure to pass its arguments and keyword arguments as a dictionary, similar to predefined normalizers in the norm_kwargs attribute below.
+normalizers: null
+
+
+# PREDEFINED PRETOKENIZER to use if tokenizer_type is "custom":
+# - "bert": BertPreTokenizer.
+# - "byte": ByteLevel.
+# - "char": CharDelimiterSplit.
+# - "digit": Digits.
+# - "space": Metaspace.
+# - "punc": Punctuation.
+# - "seq": Sequence.
+# - "split": Split.
+# - "unicode": UnicodeScripts.
+# - "wspace": Whitespace.
+# - "wssplit": WhitespaceSplit.
+
+# CUSTOM PRETOKENIZER:
+# You can pass a custom pretokenizer class too. Define it in custom_comps.py and pass the class name, for example,
+# - "JiebaPreTokenizer" for a custom pretokenizer defined in custom_comps.py.
+# NOTE: Ensure to pass its arguments and keyword arguments as a dictionary, similar to predefined pretokenizers in pretok_kwargs below.
+pretokenizer: null
+
+
+# PREDEFINED POST-PROCESSOR to use if tokenizer_type is "custom":
+# - "post": PostProcessor.
+# - "bert": BertProcessing.
+# - "byte": ByteLevel.
+# - "roberta": RobertaProcessing.
+# - "seq": Sequence.
+# - "template": TemplateProcessing.
+
+# CUSTOM POST-PROCESSOR:
+# You can pass a custom postprocessor class too. Define it in custom_comps.py and pass the class name, for example,
+# - "CustomProcessor" for a custom processor defined in custom_comps.py.
+# NOTE: Ensure to pass its arguments and keyword arguments as a dictionary, similar to predefined postprocessors in pprocessor_kwargs below.
+post_processor: null
+
+
+# PREDEFINED DECODER to use if tokenizer_type is "custom":
+# - "base": Decoder.
+# - "byte": ByteLevel.
+# - "repl": Replace.
+# - "wordpiece": WordPiece.
+# - "bytefb": ByteFallback.
+# - "fuse": Fuse.
+# - "strip": Strip.
+# - "space": Metaspace.
+# - "bpe": BPEDecoder.
+# - "ctc": CTC.
+# - "seq": Sequence.
+
+# CUSTOM DECODER:
+# You can pass a custom decoder class too. Define it in custom_comps.py and pass the class name, for example,
+# - "CustomDecoder" for a custom decoder defined in custom_comps.py.
+# NOTE: Ensure to pass its arguments and keyword arguments as a dictionary, similar to predefined decoders in decoder_kwargs below.
+decoder: null
+
+
+# Dictionary containing arguments and keyword arguments of your specified model class if tokenizer_type is "custom":
+model_kwargs: {}
+
+# List of dictionaries containing arguments and keyword arguments of specified normalizers.
+# NOTE: This must be in the same order as normalizers.
+norm_kwargs:
+    - {}
+
+# Dictionary containing arguments and keyword arguments of your tokenizer's pretokenizer class:
+pretok_kwargs: {}
+
+# Dictionary containing arguments and keyword arguments of your tokenizer's post-processor class:
+pprocessor_kwargs: {}
+
+# Dictionary containing arguments and keyword arguments of your desired model's trainer class for your tokenizer:
+trainer_kwargs: {}
+
+# Dictionary containing arguments and keyword arguments of your tokenizer's decoder class:
+decoder_kwargs: {}
+
+# Whether to enable padding.
+pad: true
+
+# Whether to truncate.
+truncate: true
+
+# Padding arguments if pad is true.
+padding_args:
+    # Can be one of: `right` or `left`.
+    direction: "right"
+    # If specified, the padding length should always snap to the next multiple of
+    # the given value. For example, if we were going to pad with a length of 250 but
+    # `pad_to_multiple_of=8`, then we will pad to 256.
+    pad_to_multiple_of: null
+    # The index to be used when padding.
+    pad_id: 0
+    # The type index to be used when padding.
+    pad_type_id: 0
+    # The pad token to be used when padding.
+    pad_token: "[PAD]"
+    # If specified, the length at which to pad. If not specified,
+    # we pad using the size of the longest sequence in a batch.
+    length: null
+
+# Truncate arguments if truncate is true.
+truncate_args:
+    # The maximum length at which to truncate.
+    max_length: 2048
+    # The length of the previous first sequence to be included
+    # in the overflowing sequence.
+    stride: 0
+    # Can be one of `longest_first`, `only_first`, or `only_second`.
+    strategy: "longest_first"
+
+# Special tokens to be added to the vocabulary.
+special_tokens:
+    - "<unk>"
+    - "<pad>"
+    - "<sep>"
+    - "<cls>"
+    - "<mask>"
