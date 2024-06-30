@@ -1,5 +1,7 @@
 <h1 align="center"> 🛠️LMBuilder <h1/>
-<p align="center"> Facilitate Seamless Construction of Robust Large Language Models <p/>
+<p align="center"> Facilitate Seamless Construction of Robust Large Language Models
+  (Project is currently in hold)
+  <p/>
 
 ## Table of Contents
 
@@ -37,8 +39,8 @@ For elaborate information, please refer to our [FEATURES.md](https://github.com/
 ### Installation
 
 ```shell
-# Example installation command
-pip install lmbuilder
+# clone the project directory
+git clone https://github.com/xdevfaheem/LMBuilder.git && cd LMBuilder
 ```
 
 ### Usage
